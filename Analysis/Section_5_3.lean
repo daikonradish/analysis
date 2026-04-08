@@ -34,6 +34,12 @@ class CauchySequence extends Sequence where
   zero : n₀ = 0
   cauchy : toSequence.IsCauchy
 
+/-structure Sequence where
+  n₀ : ℤ
+  seq : ℤ → ℚ
+  vanish : ∀ n < n₀, seq n = 0
+-/
+
 theorem CauchySequence.ext' {a b: CauchySequence} (h: a.seq = b.seq) : a = b := by
   apply CauchySequence.ext _ h
   rw [a.zero, b.zero]
@@ -65,7 +71,25 @@ theorem CauchySequence.coe_coe {a:ℕ → ℚ} (ha: (a:Sequence).IsCauchy) : mk'
 
 /-- Proposition 5.3.3 / Exercise 5.3.1 -/
 theorem Sequence.equiv_trans {a b c:ℕ → ℚ} (hab: Equiv a b) (hbc: Equiv b c) :
-  Equiv a c := by sorry
+  Equiv a c := by
+  have hab' := (Sequence.equiv_iff a b).mp hab
+  have hbc' := (Sequence.equiv_iff b c).mp hbc
+  rw [(Sequence.equiv_iff a c)]
+  intro ε hε
+  specialize hab' (ε/2) (by positivity)
+  specialize hbc' (ε/2) (by positivity)
+  obtain ⟨N₁, hN₁⟩ := hab'
+  obtain ⟨N₂, hN₂⟩ := hbc'
+  use max N₁ N₂
+  intro n hn
+  specialize hN₁ n (by omega)
+  specialize hN₂ n (by omega)
+  calc |a n - c n| = |(a n - b n) + (b n - c n)| := by ring_nf
+                  _≤ |a n - b n| + |b n - c n|   := by exact Section_4_3.abs_add (a n - b n) (b n - c n)
+                  _≤ (ε / 2) + (ε / 2)           := by linarith
+                  _= ε                           := by norm_num
+
+
 
 /-- Proposition 5.3.3 / Exercise 5.3.1 -/
 instance CauchySequence.instSetoid : Setoid CauchySequence where

@@ -174,11 +174,58 @@ example : (0.1:ℚ).Steady ((fun n:ℕ ↦ (10:ℚ) ^ (-(n:ℤ)-1) ):Sequence) :
 /--
 Example 5.1.5: The sequence 0.1, 0.01, 0.001, ... is not 0.01-steady. Left as an exercise.
 -/
-example : ¬(0.01:ℚ).Steady ((fun n:ℕ ↦ (10:ℚ) ^ (-(n:ℤ)-1) ):Sequence) := by sorry
+example : ¬(0.01:ℚ).Steady ((fun n:ℕ ↦ (10:ℚ) ^ (-(n:ℤ)-1) ):Sequence) := by
+  intro hs
+  rw [Rat.Steady.coe] at hs
+  specialize hs 0 1
+  unfold Rat.Close at hs
+  norm_num at hs
 
 /-- Example 5.1.5: The sequence 1, 2, 4, 8, ... is not ε-steady for any ε. Left as an exercise.
 -/
-example (ε:ℚ) : ¬ ε.Steady ((fun n:ℕ ↦ (2 ^ (n+1):ℚ) ):Sequence) := by sorry
+example (ε:ℚ) : ¬ ε.Steady ((fun n:ℕ ↦ (2 ^ (n+1):ℚ) ):Sequence) := by
+  intro hs
+  rw [Rat.Steady.coe] at hs
+  unfold Rat.Close at hs
+  have hn: ∀ n, |2^(n+1) - 2| ≤ ε := hs (m := 0)
+  simp at hn
+  have fact1 : ∀ n : ℕ, 2 ≤ (2 ^ (n + 1):ℚ) := by
+    intro n
+    induction' n with k ih
+    · simp
+    · rw [pow_succ]
+      suffices alternatively : 1 ≤ (2 ^ (k + 1):ℚ) by
+        have this := mul_le_mul_of_nonneg_right alternatively (by norm_num : (0 : ℚ) ≤ 2)
+        rw [one_mul] at this
+        exact this
+      linarith only [ih]
+  have fact2 : ∀ n : ℕ, 0 ≤ (2 ^ (n + 1):ℚ) - 2 := by
+    intro n
+    specialize fact1 n
+    linarith only [fact1]
+  have fact3 : ∀ n : ℕ, (2 ^ (n + 1):ℚ) - 2 = |(2 ^ (n + 1):ℚ) - 2| := by
+    intro n
+    specialize fact2 n
+    exact (abs_of_nonneg fact2).symm
+  conv at hn =>
+    intro n
+    arg 1
+    rw [← fact3]
+  conv at hn =>
+    intro n
+    rw [sub_le_iff_le_add]
+  have fact4 : ∀ n : ℕ, (2 ^ (n) : ℚ) ≥ (n: ℚ) := by
+    intro n
+    norm_cast
+    exact Section_4_3.two_pow_geq n
+  obtain ⟨d, hd⟩ := exists_nat_gt (ε + 1)
+  have hd' : ε + 2 < d + 1 := by linarith [hd]
+  norm_cast at hd'
+  specialize fact4 (d + 1)
+  have hcontra : 2 ^ (d + 1) > ε + 2 := by linarith [fact4, hd']
+  specialize hn d
+  linarith only [hcontra, hn]
+
 
 /-- Example 5.1.5:The sequence 2, 2, 2, ... is ε-steady for any ε > 0.
 -/
@@ -230,7 +277,8 @@ Example 5.1.7: The sequence `a_10, a_11, a_12, ...` is 0.1-steady
 -/
 lemma Sequence.ex_5_1_7_b : (0.1:ℚ).Steady (((fun n:ℕ ↦ (n+1:ℚ)⁻¹ ):Sequence).from 10) := by
   rw [Rat.Steady]
-  intro n hn m hm; simp at hn hm
+  intro n hn m hm
+  simp at hn hm
   lift n to ℕ using (by omega)
   lift m to ℕ using (by omega)
   simp_all [Rat.Close]
@@ -247,8 +295,8 @@ lemma Sequence.ex_5_1_7_b : (0.1:ℚ).Steady (((fun n:ℕ ↦ (n+1:ℚ)⁻¹ ):S
 /--
 Example 5.1.7: The sequence 1, 1/2, 1/3, ... is eventually 0.1-steady
 -/
-lemma Sequence.ex_5_1_7_c : (0.1:ℚ).EventuallySteady ((fun n:ℕ ↦ (n+1:ℚ)⁻¹ ):Sequence) :=
-  ⟨10, by simp, ex_5_1_7_b⟩
+lemma Sequence.ex_5_1_7_c : (0.1:ℚ).EventuallySteady ((fun n:ℕ ↦ (n+1:ℚ)⁻¹ ):Sequence) := by
+  exact ⟨10, by simp, ex_5_1_7_b⟩
 
 /--
 Example 5.1.7
@@ -256,7 +304,20 @@ Example 5.1.7
 The sequence 10, 0, 0, ... is eventually ε-steady for every ε > 0. Left as an exercise.
 -/
 lemma Sequence.ex_5_1_7_d {ε:ℚ} (hε:ε>0) :
-    ε.EventuallySteady ((fun n:ℕ ↦ if n=0 then (10:ℚ) else (0:ℚ) ):Sequence) := by sorry
+    ε.EventuallySteady ((fun n:ℕ ↦ if n=0 then (10:ℚ) else (0:ℚ) ):Sequence) := by
+    use 1
+    constructor
+    · simp
+    · intro n hn m hm
+      simp at hn hm
+      lift n to ℕ using (by omega)
+      lift m to ℕ using (by omega)
+      simp_all [Rat.Close]
+      have hn0 : n ≠ 0 := by exact Nat.ne_zero_of_lt hn
+      have hm0 : m ≠ 0 := by exact Nat.ne_zero_of_lt hm
+      rw [if_neg hn0, if_neg hm0]
+      norm_num
+      linarith
 
 abbrev Sequence.IsCauchy (a:Sequence) : Prop := ∀ ε > (0:ℚ), ε.EventuallySteady a
 
@@ -301,14 +362,177 @@ noncomputable def Sequence.sqrt_two : Sequence := (fun n:ℕ ↦ ((⌊ (Real.sqr
 /--
   Example 5.1.10. (This requires extensive familiarity with Mathlib's API for the real numbers.)
 -/
-theorem Sequence.ex_5_1_10_a : (1:ℚ).Steady sqrt_two := by sorry
+lemma Real.rational_approx_ge_floor (r : ℝ): ∀ n : ℕ, ⌊r⌋ ≤ ((⌊r * 10^n⌋ / 10^n):ℚ) := by
+  intro n
+  rw [le_div_iff₀ (by positivity)]
+  norm_cast
+  apply Int.le_floor.mpr
+  simp
+  exact Int.floor_le r
+
+lemma Real.rational_approx_le_floor_add_one (r : ℝ) : ∀ n : ℕ, ((⌊r * 10^n⌋ / 10^n):ℚ) ≤ ⌊r⌋ + 1 := by
+  intro n
+  rw [div_le_iff₀ (by positivity)]
+  norm_cast
+  have fact := calc ⌊r * (10 ^ n)⌋ ≤ r * 10^n       := by exact Int.floor_le (r * 10 ^ n)
+                                 _ < (⌊r⌋+1) * 10^n := by gcongr; apply Int.lt_floor_add_one r
+  norm_cast at fact
+  linarith
+
+lemma Real.decimal_approx_le_ten_pow_n (r : ℝ) : ∀ n : ℕ, |r - ⌊r * 10^n⌋ / 10^n| ≤ 1 / 10^n := by
+  intro n
+  apply abs_le.mpr
+  constructor
+  · --have hpos : (0:ℝ) ≤ 10^n := by positivity
+    have fact : ⌊10 ^ n * r⌋ ≤ 10 ^ n * r  := by exact Int.floor_le _
+    field_simp at *
+    linarith
+  · --have hpos : (0:ℝ) ≤ 10^n := by positivity
+    have fact : 10 ^ n * r < ⌊10 ^ n * r⌋ + 1 := by exact Int.lt_floor_add_one _
+    field_simp at *
+    linarith
+
+lemma Rat.decimal_approx_monotone (r : ℝ) :
+  ∀ n m : ℕ, n ≤ m → (⌊r * 10^n⌋ : ℚ) / 10^n ≤ (⌊r * 10^m⌋ : ℚ) / 10^m := by
+    intro n m hle
+    obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hle
+    field_simp
+    rw [pow_add]
+    conv =>
+      lhs
+      rw [mul_comm, mul_assoc]
+    gcongr
+    · norm_cast
+      rw [Int.le_floor]
+      have fact : (10 ^ d) * ⌊r * 10 ^ n⌋ ≤ (10 ^ d) * (r * 10 ^ n) := by
+        gcongr
+        exact Int.floor_le (r * 10 ^ n)
+      have hineq :=
+        calc _ = ((10 ^ d):ℝ) * ⌊r * 10 ^ n⌋:= by norm_cast
+            _ ≤ (10 ^ d) * (r * 10 ^ n)    := by exact fact
+            _ = r * (10 ^ n * 10 ^ d)      := by ring
+            _ = r * 10 ^(n+d)              := by congr; rw [pow_add]
+      norm_cast at hineq
+
+
+lemma Rat.decimal_approx_abs_le_ten_pow_n
+  (r : ℝ) :
+  ∀ n m: ℕ, n ≤ m → |(⌊r * 10^n⌋ : ℚ) / 10^n - (⌊r * 10^m⌋ : ℚ) / 10^m| ≤ 1 / 10^n := by
+    intro n m hle
+    rw [abs_sub_comm]
+    have hmono := Rat.decimal_approx_monotone r n m hle; rw [← sub_nonneg] at hmono
+    rw [abs_of_nonneg hmono]
+    obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hle
+    field_simp [pow_add]
+    rify
+    have fact :=
+      calc
+          (↑⌊r * 10 ^ (n + d)⌋ * 10 ^ n - 10 ^ (n + d) * ↑⌊r * 10 ^ n⌋ : ℝ)
+        ≤ (r * 10 ^ (n + d)) * 10 ^ n - 10 ^ (n + d) * ↑⌊r * 10 ^ n⌋ := by
+            gcongr
+            exact Int.floor_le _
+      _ = 10 ^ (n + d) * (r * 10 ^ n - ↑⌊r * 10 ^ n⌋) := by ring
+      _ < 10 ^ (n + d) * 1 := by
+            gcongr
+            exact sub_lt_iff_lt_add.mpr (by rw [add_comm]; exact Int.lt_floor_add_one (r * 10 ^ n))
+      _ = 10 ^ (n + d) := by rw [mul_one]
+    exact le_of_lt fact
+
+lemma Real.floor_sqrt_two_is_one : (⌊Real.sqrt 2⌋:ℚ) = 1 := by
+  norm_cast
+  rw [Int.floor_eq_iff]
+  constructor
+  · norm_num
+  · norm_cast
+    norm_num
+    exact (Real.sqrt_lt' (by positivity)).mpr (by norm_num)
+
+lemma Sequence.sqrt_two_approximation_ge_one : ∀ n : ℕ, 1 ≤ ((⌊(Real.sqrt 2)*10^n ⌋ / 10^n):ℚ) := by
+  intro n
+  have hlb := Real.rational_approx_ge_floor (Real.sqrt 2) n
+  rwa [← Real.floor_sqrt_two_is_one]
+
+lemma Sequence.sqrt_two_approximation_le_two : ∀ n : ℕ, ((⌊(Real.sqrt 2)*10^n ⌋ / 10^n):ℚ) ≤ 2 := by
+  intro n
+  have hub := Real.rational_approx_le_floor_add_one (Real.sqrt 2) n
+  rw [Real.floor_sqrt_two_is_one] at hub
+  norm_num at hub
+  exact hub
+
+
+theorem Sequence.ex_5_1_10_a : (1:ℚ).Steady sqrt_two := by
+  change (1:ℚ).Steady (fun n:ℕ ↦ ((⌊ (Real.sqrt 2)*10^n ⌋ / 10^n):ℚ))
+  simp [Rat.Steady.coe]
+  intro n m
+  have hnlb := Sequence.sqrt_two_approximation_ge_one n
+  have hnub := Sequence.sqrt_two_approximation_le_two n
+  have hnpos : ((⌊ (Real.sqrt 2)*10^n ⌋ / 10^n):ℚ) - 1 ≥ 0 := by linarith
+  --have hmpos : ((⌊ (Real.sqrt 2)*10^m ⌋ / 10^m):ℚ) - 1 ≥ 0 := by linarith
+  have hneq := abs_of_nonneg hnpos
+  --have hmeq := abs_of_nonneg hmpos
+  have hlower : (1:ℚ).Close (↑⌊√2 * 10 ^ n⌋ / 10 ^ n) 1 := by
+    simp [Rat.Close]
+    rw [hneq]
+    linarith [hnub]
+  have hupper : (1:ℚ).Close (↑⌊√2 * 10 ^ n⌋ / 10 ^ n) 2 := by
+    simp [Rat.Close]
+    --calc |↑⌊√2 * 10 ^ n⌋ / 10 ^ n - 2|
+    rw [abs_le]
+    constructor
+    · linarith
+    · linarith
+  have hmlb := Sequence.sqrt_two_approximation_ge_one m
+  have hmub := Sequence.sqrt_two_approximation_le_two m
+  exact Section_4_3.close_between hlower hupper (Or.inl ⟨hmlb, hmub⟩)
 
 /--
   Example 5.1.10. (This requires extensive familiarity with Mathlib's API for the real numbers.)
 -/
-theorem Sequence.ex_5_1_10_b : (0.1:ℚ).Steady (sqrt_two.from 1) := by sorry
+-- you can parametrize using Sequence.sqrt_two_approximation_le_two.
+-- probaby something like, for all n, the rational approximation will always be less than some
+-- decimal error.
+theorem Sequence.ex_5_1_10_b : (0.1:ℚ).Steady (sqrt_two.from 1) := by
+  rw [sqrt_two]
+  rw [Rat.Steady]
+  intro n hn m hm
+  simp at hn hm
+  lift n to ℕ using (by omega)
+  lift m to ℕ using (by omega)
+  simp_all [Rat.Close]
+  wlog hnm : n ≤ m generalizing n m
+  · rw [abs_sub_comm]
+    exact this m n hm hn (Nat.le_of_not_le hnm)
+  · have fact := Rat.decimal_approx_abs_le_ten_pow_n (Real.sqrt 2) n m hnm
+    refine le_trans fact ?_
+    norm_num
+    rw [inv_eq_one_div]
+    apply one_div_le_one_div_of_le
+    · norm_num
+    · conv_lhs => rw [← pow_one 10]
+      exact (pow_le_pow_iff_right₀ rfl).mpr hn
 
-theorem Sequence.ex_5_1_10_c : (0.1:ℚ).EventuallySteady sqrt_two := by sorry
+example : (0.1:ℚ).Steady (((fun n:ℕ ↦ (n+1:ℚ)⁻¹ ):Sequence).from 10) := by
+  rw [Rat.Steady]
+  intro n hn m hm; simp at hn hm
+  lift n to ℕ using (by omega)
+  lift m to ℕ using (by omega)
+  simp_all [Rat.Close]
+  wlog h : m ≤ n
+  · specialize this m n _ _ _ <;> try omega
+    rwa [abs_sub_comm] at this
+  rw [abs_sub_comm]
+  have : ((n:ℚ) + 1)⁻¹ ≤ ((m:ℚ) + 1)⁻¹ := by gcongr
+  rw [abs_of_nonneg (by linarith), show (0.1:ℚ) = (10:ℚ)⁻¹ - 0 by norm_num]
+  gcongr
+  · norm_cast; omega
+  positivity
+
+theorem Sequence.ex_5_1_10_c : (0.1:ℚ).EventuallySteady sqrt_two := by
+  use 1
+  rw [sqrt_two]
+  constructor
+  · norm_num
+  · exact Sequence.ex_5_1_10_b
 
 /-- Proposition 5.1.11. The harmonic sequence, defined as a₁ = 1, a₂ = 1/2, ... is a Cauchy sequence. -/
 theorem Sequence.IsCauchy.harmonic : (mk' 1 (fun n ↦ (1:ℚ)/n)).IsCauchy := by
@@ -366,7 +590,25 @@ lemma Sequence.isBounded_def (a:Sequence) : a.IsBounded ↔ ∃ M ≥ 0, a.Bound
 example : BoundedBy ![1,-2,3,-4] 4 := by intro i; fin_cases i <;> norm_num
 
 /-- Example 5.1.13 -/
-example : ¬((fun n:ℕ ↦ (-1)^n * (n+1:ℚ)):Sequence).IsBounded := by sorry
+example : ¬((fun n:ℕ ↦ (-1)^n * (n+1:ℚ)):Sequence).IsBounded := by
+  intro hbdd
+  obtain ⟨M, ⟨hM₁, hM₂⟩⟩ := hbdd
+  specialize hM₂ (⌊M⌋)
+  simp at hM₂
+  rw [if_pos (by positivity)] at hM₂
+  rw [abs_mul, abs_neg_one_pow, one_mul] at hM₂
+  norm_cast at hM₂
+  have hnatfloor : ⌊M⌋.toNat = ⌊M⌋ := by
+    refine Int.toNat_of_nonneg ?_
+    positivity
+  push_cast at hM₂
+  qify at hnatfloor
+  conv at hM₂ =>
+    lhs
+    arg 1
+    rw [hnatfloor]
+  have hfloorle := Int.lt_floor_add_one M
+  linarith
 
 /-- Example 5.1.13 -/
 example : ((fun n:ℕ ↦ (-1:ℚ)^n):Sequence).IsBounded := by
@@ -375,8 +617,10 @@ example : ((fun n:ℕ ↦ (-1:ℚ)^n):Sequence).IsBounded := by
 /-- Example 5.1.13 -/
 example : ¬((fun n:ℕ ↦ (-1:ℚ)^n):Sequence).IsCauchy := by
   rw [Sequence.IsCauchy.coe]
-  by_contra h; specialize h (1/2 : ℚ) (by norm_num)
-  choose N h using h; specialize h N _ (N+1) _ <;> try omega
+  by_contra h
+  specialize h (1/2 : ℚ) (by norm_num)
+  choose N h using h
+  specialize h N _ (N+1) _ <;> try omega
   by_cases h': Even N
   · simp [h'.neg_one_pow, (h'.add_one).neg_one_pow, Section_4_3.dist] at h
     norm_num at h
@@ -401,16 +645,108 @@ lemma IsBounded.finite {n:ℕ} (a: Fin n → ℚ) : ∃ M ≥ 0,  BoundedBy a M 
 
 /-- Lemma 5.1.15 (Cauchy sequences are bounded) / Exercise 5.1.1 -/
 lemma Sequence.isBounded_of_isCauchy {a:Sequence} (h: a.IsCauchy) : a.IsBounded := by
-  sorry
+  rw [Sequence.IsCauchy] at h
+  specialize h 1 (by positivity)
+  rw [Rat.EventuallySteady] at h
+  obtain ⟨N, ⟨hge, hstd⟩⟩ := h
+  rw [Rat.Steady] at hstd
+  set tailbound := |a.seq N| + 1
+  set headelems := Finset.Icc a.n₀ N
+  set headbound := (Finset.Icc a.n₀ N).sup' (by exact Finset.nonempty_Icc.mpr hge) (λ n => |a.seq n|)
+  use max headbound tailbound
+  have hmax : 0 ≤ max headbound tailbound := by
+    apply le_max_iff.mpr
+    right
+    unfold tailbound
+    positivity
+  constructor
+  · exact hmax
+  · rw [BoundedBy]
+    intro n
+    by_cases vanished : n < a.n₀
+    · have fact := a.vanish n vanished
+      rw [fact]
+      rw [abs_zero]
+      exact hmax
+    · push_neg at vanished
+      by_cases headtail : n ≤ N
+      · have fact : n ∈ Finset.Icc a.n₀ N := by exact Finset.mem_Icc.mpr ⟨vanished, headtail⟩
+        simp; left
+        unfold headbound
+        exact Finset.le_sup' (λ n => |a.seq n|) fact
+      · push_neg at headtail
+        simp; right
+        unfold tailbound
+        specialize hstd N (by grind) n (by grind)
+        rw [Rat.Close] at hstd
+        rw [@Sequence.from_eval a N N (by linarith)] at hstd
+        rw [@Sequence.from_eval a N n (by linarith)] at hstd
+        calc |a.seq n| = |a.seq N + (a.seq n - a.seq N)| := by congr; linarith
+                     _ ≤ |a.seq N| + |a.seq n - a.seq N| := by exact Section_4_3.abs_add (a.seq N) _
+                     _ ≤ |a.seq N| + |a.seq N - a.seq n| := by rw [abs_sub_comm]
+                     _ ≤ |a.seq N| + 1                   := by linarith [hstd]
+
 
 /-- Exercise 5.1.2 -/
 theorem Sequence.isBounded_add {a b:ℕ → ℚ} (ha: (a:Sequence).IsBounded) (hb: (b:Sequence).IsBounded):
-    (a + b:Sequence).IsBounded := by sorry
+    (a + b:Sequence).IsBounded := by
+  obtain ⟨Ma, ⟨hga, hbdda⟩⟩ := ha
+  obtain ⟨Mb, ⟨hgb, hbddb⟩⟩ := hb
+  use Ma + Mb
+  constructor
+  · positivity
+  · rw [BoundedBy] at *
+    intro n
+    specialize hbdda n
+    specialize hbddb n
+    simp at *
+    split_ifs with h
+    · rw [if_pos h] at *
+      calc |a n.toNat + b n.toNat| ≤ |a n.toNat| + |b n.toNat| := by exact Section_4_3.abs_add (a n.toNat) _
+                                 _ ≤ Ma + Mb                   := by linarith
+    · rw [abs_zero]
+      linarith
 
 theorem Sequence.isBounded_sub {a b:ℕ → ℚ} (ha: (a:Sequence).IsBounded) (hb: (b:Sequence).IsBounded):
-    (a - b:Sequence).IsBounded := by sorry
+    (a - b:Sequence).IsBounded := by
+  obtain ⟨Ma, ⟨hga, hbdda⟩⟩ := ha
+  obtain ⟨Mb, ⟨hgb, hbddb⟩⟩ := hb
+  use Ma + Mb
+  constructor
+  · positivity
+  · rw [BoundedBy] at *
+    intro n
+    specialize hbdda n
+    specialize hbddb n
+    simp at *
+    split_ifs with h
+    · rw [if_pos h] at *
+      calc |a n.toNat - b n.toNat| = |a n.toNat + (-b n.toNat)|   := by congr; linarith
+                                 _ ≤ |a n.toNat| + |(-b n.toNat)| := by exact Section_4_3.abs_add (a n.toNat) _
+                                 _ = |a n.toNat| + |b n.toNat|    := by rw [abs_neg]
+                                 _ ≤ Ma + Mb                      := by linarith
+    · rw [abs_zero]
+      linarith
 
 theorem Sequence.isBounded_mul {a b:ℕ → ℚ} (ha: (a:Sequence).IsBounded) (hb: (b:Sequence).IsBounded):
-    (a * b:Sequence).IsBounded := by sorry
+    (a * b:Sequence).IsBounded := by
+  obtain ⟨Ma, ⟨hga, hbdda⟩⟩ := ha
+  obtain ⟨Mb, ⟨hgb, hbddb⟩⟩ := hb
+  use Ma * Mb
+  constructor
+  · positivity
+  · rw [BoundedBy] at *
+    intro n
+    specialize hbdda n
+    specialize hbddb n
+    simp at *
+    split_ifs with h
+    · rw [if_pos h] at *
+      rw [abs_mul]
+      have haabs : 0 ≤ |a n.toNat| := by positivity
+      have hbabs : 0 ≤ |b n.toNat| := by positivity
+      nlinarith
+    · rw [abs_zero]
+      positivity
 
 end Chapter5

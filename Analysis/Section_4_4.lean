@@ -26,10 +26,32 @@ Users of the companion who have completed the exercises in this section are welc
 
 /-- Proposition 4.4.1 (Interspersing of integers by rationals) / Exercise 4.4.1 -/
 theorem Rat.between_int (x:ℚ) : ∃! n:ℤ, n ≤ x ∧ x < n+1 := by
-  sorry
+  use ⌊x⌋
+  constructor
+  · constructor
+    · exact Rat.floor_le x
+    · norm_cast
+      exact Rat.lt_floor_add_one x
+  · intro m ⟨h₁, h₂⟩
+    apply le_antisymm
+    · exact Int.le_floor.mpr h₁
+    · exact Int.floor_le_iff.mpr h₂
 
 theorem Nat.exists_gt (x:ℚ) : ∃ n:ℕ, n > x := by
-  sorry
+  obtain ⟨n, ⟨⟨hn₁, hn₂⟩, _⟩⟩ := x.between_int
+  cases n with
+  | ofNat n'   =>
+    use n' + 1
+    norm_cast at hn₂
+  | negSucc n' =>
+    use 0
+    simp [Int.negSucc_eq] at hn₂
+    have h0 : (-n' : ℤ) ≤ (0 : ℚ) := by
+      norm_cast
+      linarith
+    norm_cast at hn₂
+    push_cast
+    linarith
 
 /-- Proposition 4.4.3 (Interspersing of rationals) -/
 theorem Rat.exists_between_rat {x y:ℚ} (h: x < y) : ∃ z:ℚ, x < z ∧ z < y := by
@@ -46,36 +68,102 @@ theorem Rat.exists_between_rat {x y:ℚ} (h: x < y) : ∃ z:ℚ, x < z ∧ z < y
 
 /-- Exercise 4.4.2 (a) -/
 theorem Nat.no_infinite_descent : ¬ ∃ a:ℕ → ℕ, ∀ n, a (n+1) < a n := by
-  sorry
+  rintro ⟨a, h⟩
+  have hge0 : ∀ n, 0 ≤ a n := by
+    intro n
+    exact zero_le (a n) -- all the elements of the sequence are naturals, so they are greater or equal to 0.
+  have hdesc : ∀ k n, a n ≥ k := by
+    intro k
+    induction' k with k ih
+    · exact hge0
+    · intro n
+      specialize ih (n+1)
+      specialize h n
+      have fact : k < k + 1 := by linarith
+      change k ≤ a (n + 1) at ih
+      change k + 1 ≤ a n
+      have : k < a n := by
+        calc k ≤ a (n + 1) := ih
+             _ < a n       := h
+      exact add_one_le_iff.mpr this
+  specialize hdesc (a 0 + 1) 0
+  have weird : a 0 > a 0 := by
+          calc a 0 ≥ a 0 + 1 := by exact hdesc
+                 _ > a 0     := by exact Nat.lt_add_one (a 0)
+  exact Nat.lt_irrefl (a 0) weird
+
 
 /-- Exercise 4.4.2 (b) -/
 def Int.infinite_descent : Decidable (∃ a:ℕ → ℤ, ∀ n, a (n+1) < a n) := by
   -- the first line of this construction should be either `apply isTrue` or `apply isFalse`.
-  sorry
+  apply isTrue
+  use (fun n => -n)
+  intro n
+  simp
 
 /-- Exercise 4.4.2 (b) -/
 def Rat.pos_infinite_descent : Decidable (∃ a:ℕ → {x: ℚ // 0 < x}, ∀ n, a (n+1) < a n) := by
   -- the first line of this construction should be either `apply isTrue` or `apply isFalse`.
-  sorry
+  apply isTrue
+  use (fun n => ⟨1 / (n + 1 : ℚ), by positivity⟩)
+  intro n
+  simp
+  refine (inv_lt_inv₀ ?_ ?_).mpr ?_
+  · positivity
+  · positivity
+  · linarith
 
 #check even_iff_exists_two_mul
 #check odd_iff_exists_bit1
 
 theorem Nat.even_or_odd'' (n:ℕ) : Even n ∨ Odd n := by
-  sorry
+  induction' n with n hn
+  · left; use 0
+  · rcases hn with (hev | hod)
+    · obtain ⟨d, hd⟩ := hev
+      right
+      use d
+      rw [hd]
+      ring_nf
+    · obtain ⟨d, hd⟩ := hod
+      left
+      use d + 1
+      rw [hd]
+      ring_nf
 
 theorem Nat.not_even_and_odd (n:ℕ) : ¬ (Even n ∧ Odd n) := by
-  sorry
+  rintro ⟨hev, hod⟩
+  obtain ⟨d₁, hd₁⟩ := hev
+  obtain ⟨d₂, hd₂⟩ := hod
+  have hmod₁ : n % 2 = 0 := by
+    rw [hd₁]
+    rw [← two_mul]
+    exact mul_mod_right 2 d₁
+  have hmod₂ : n % 2 = 1 := by
+    rw [hd₂]
+    rw [Nat.add_mod]
+    rw [mul_mod_right 2 d₂]
+    rw [zero_add]
+    rw [one_mod]
+  rw [hmod₂] at hmod₁
+  norm_num at hmod₁
 
 #check Nat.rec
 
 /-- Proposition 4.4.4 / Exercise 4.4.3  -/
 theorem Rat.not_exist_sqrt_two : ¬ ∃ x:ℚ, x^2 = 2 := by
   -- This proof is written to follow the structure of the original text.
-  by_contra h; choose x hx using h
+  by_contra h
+  choose x hx using h
   have hnon : x ≠ 0 := by aesop
   wlog hpos : x > 0
-  . apply this _ _ _ (show -x>0 by simp; order) <;> grind
+  . apply  -- generalize x to the nonneg case
+      this -- this : ∀ (x : ℚ), x ^ 2 = 2 → x ≠ 0 → x > 0 → False
+      (-x)
+      _    -- prove that (-x)^2 = 2
+      _    -- prove that x ≠ 0
+      (show -x>0 by simp; order) -- prove that -x > 0
+      <;> grind
   have hrep : ∃ p q:ℕ, p > 0 ∧ q > 0 ∧ p^2 = 2*q^2 := by
     use x.num.toNat, x.den
     observe hnum_pos : x.num > 0
@@ -93,10 +181,17 @@ theorem Rat.not_exist_sqrt_two : ¬ ∃ x:ℚ, x^2 = 2 := by
       choose q hpos hq using hPp.2
       have : q^2 = 2 * k^2 := by linarith
       use q; constructor
-      . sorry
+      . nlinarith
       exact ⟨ hpos, k, by linarith [hPp.1], this ⟩
     have h1 : Odd (p^2) := by
-      sorry
+      obtain ⟨d, hd⟩ := hp
+      have hdsq := congrArg (λ expr => expr ^ 2) hd; dsimp at hdsq
+      conv at hdsq =>
+        rhs
+        ring_nf
+      use (2 * d^2 + 2 * d)
+      rw [hdsq]
+      ring_nf
     have h2 : Even (p^2) := by
       choose q hpos hq using hPp.2
       rw [even_iff_exists_two_mul]
