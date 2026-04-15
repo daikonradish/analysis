@@ -74,11 +74,7 @@ theorem Sequence.equiv_trans {a b c:ℕ → ℚ} (hab: Equiv a b) (hbc: Equiv b 
   Equiv a c := by
   have hab' := (Sequence.equiv_iff a b).mp hab
   have hbc' := (Sequence.equiv_iff b c).mp hbc
-<<<<<<< Updated upstream
-  rw [(Sequence.equiv_iff a c)]
-=======
   rw [Sequence.equiv_iff a c]
->>>>>>> Stashed changes
   intro ε hε
   specialize hab' (ε/2) (by positivity)
   specialize hbc' (ε/2) (by positivity)
@@ -101,16 +97,6 @@ theorem Sequence.equiv_refl {a : ℕ → ℚ} : Equiv a a := by
   norm_num
   linarith
 
-theorem Sequence.equiv_symm {a b : ℕ → ℚ} (hab : Equiv a b) : Equiv b a := by
-  have hab' := (Sequence.equiv_iff a b).mp hab
-  rw [Sequence.equiv_iff b a]
-  intro ε hε
-  obtain ⟨N, hN⟩ := hab' ε hε
-  use N
-  intro n hn
-  specialize hN n hn
-  rw [abs_sub_comm]
-  exact hN
 
 /-- Proposition 5.3.3 / Exercise 5.3.1 -/
 instance CauchySequence.instSetoid : Setoid CauchySequence where
@@ -121,7 +107,7 @@ instance CauchySequence.instSetoid : Setoid CauchySequence where
        exact Sequence.equiv_refl
      symm := by
        intro a b hab
-       exact Sequence.equiv_symm hab
+       exact Sequence.equiv_symm a b hab
      trans := by
        intro a b c hab hbc
        exact Sequence.equiv_trans hab hbc
