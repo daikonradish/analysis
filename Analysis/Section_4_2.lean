@@ -1085,16 +1085,16 @@ theorem Rat.equivRat_add (a b : Rat) : equivRat (a + b) = equivRat a + equivRat 
 theorem Rat.equivRat_mul (a b : Rat) : equivRat (a * b) = equivRat a * equivRat b := by
   obtain ⟨a₁, a₂, ha, rfl⟩ := Rat.eq_diff a
   obtain ⟨b₁, b₂, hb, rfl⟩ := Rat.eq_diff b
-  conv => 
-    lhs 
+  conv =>
+    lhs
     rw [@Rat.mul_eq _ _ _ _ ha hb]
-  simp 
+  simp
   split_ifs with hif
-  · simp 
-    norm_cast 
+  · simp
+    norm_cast
     exact Eq.symm (Rat.divInt_mul_divInt a₁ b₁)
   · push_neg at hif
-    exact absurd (hif ha) hb 
+    exact absurd (hif ha) hb
 
 theorem Rat.equivRat_sub (a b : Rat) : equivRat (a - b) = equivRat a - equivRat b := by
   change equivRat (a + (-b)) = equivRat a - equivRat b
@@ -1104,7 +1104,7 @@ theorem Rat.equivRat_sub (a b : Rat) : equivRat (a - b) = equivRat a - equivRat 
    _ = equivRat a - equivRat b     := by linarith
 
 
-theorem Rat.neg_div_neg (a b : ℤ) (hb : b ≠ 0): (-a) // (-b) = a // b := by 
+theorem Rat.neg_div_neg (a b : ℤ) (hb : b ≠ 0): (-a) // (-b) = a // b := by
   rw [@Rat.eq _ _ _ _ (Int.neg_ne_zero.mpr hb) hb]
   simp
 
@@ -1128,38 +1128,38 @@ theorem Rat.equivRat_isPos (q : Rat) : q.isPos ↔ 0 < equivRat q := by
     rw [Rat.equivRat_mk _ _ hq] at hgt0
     rcases div_pos_iff.mp hgt0 with (⟨hq₁, hq₂⟩ | ⟨hq₁, hq₂⟩)
     · use q₁, q₂
-      constructor 
+      constructor
       · exact Rat.intCast_pos.mp hq₁
-      · constructor 
+      · constructor
         · exact Rat.intCast_pos.mp hq₂
         · exact Rat.div_is_div q₁ q₂ hq
     · use (-q₁), (-q₂)
-      constructor 
+      constructor
       · exact_mod_cast neg_pos.mpr hq₁
-      · constructor 
+      · constructor
         · exact_mod_cast neg_pos.mpr hq₂
         · rw [← Rat.neg_div_neg _ _ hq]
-          exact Rat.div_is_div (-q₁) (-q₂) (Int.neg_ne_zero.mpr hq) 
+          exact Rat.div_is_div (-q₁) (-q₂) (Int.neg_ne_zero.mpr hq)
 
-theorem Rat.equivRat_isNeg (q : Rat) : q.isNeg ↔ equivRat q < 0 := by 
-  constructor 
-  · intro hneg 
-    obtain ⟨r, ⟨hrpos, hreq⟩⟩ := hneg 
+theorem Rat.equivRat_isNeg (q : Rat) : q.isNeg ↔ equivRat q < 0 := by
+  constructor
+  · intro hneg
+    obtain ⟨r, ⟨hrpos, hreq⟩⟩ := hneg
     rw [Rat.equivRat_isPos] at hrpos
     have hreq' := congr_arg equivRat hreq
     rw [Rat.equivRat_neg] at hreq'
     rw [hreq']
     exact Rat.neg_lt_iff.mp hrpos
-  · intro h 
+  · intro h
     have h' : -(equivRat q) > 0 := by exact Rat.lt_neg_iff.mp h
     rw [← Rat.equivRat_neg] at h'
     rw [gt_iff_lt] at h'
     rw [← Rat.equivRat_isPos (-q)] at h'
     use -q
-    constructor 
-    · exact h' 
+    constructor
+    · exact h'
     · simp
-  
+
 /-- Not in textbook: equivalence preserves order -/
 abbrev Rat.equivRat_order : Rat ≃o ℚ where
   toEquiv := equivRat
@@ -1168,22 +1168,22 @@ abbrev Rat.equivRat_order : Rat ≃o ℚ where
     constructor
     · intro h
       rcases lt_or_eq_of_le h with (hlt | heq)
-      · left 
+      · left
         change (a-b).isNeg
-        have  hlt' : equivRat a + (-equivRat b) < 0 := by linarith 
+        have  hlt' : equivRat a + (-equivRat b) < 0 := by linarith
         rw [← Rat.equivRat_neg, ← Rat.equivRat_add] at hlt'
-        change equivRat (a - b) < 0 at hlt' 
-        rw [← Rat.equivRat_isNeg] at hlt' 
+        change equivRat (a - b) < 0 at hlt'
+        rw [← Rat.equivRat_isNeg] at hlt'
         exact hlt'
       · right; exact equivRat.injective heq
     · rintro (hlt | heq)
-      · obtain ⟨d, ⟨hdpos, hdeq⟩⟩ := hlt 
-        rw [Rat.equivRat_isPos] at hdpos 
+      · obtain ⟨d, ⟨hdpos, hdeq⟩⟩ := hlt
+        rw [Rat.equivRat_isPos] at hdpos
         have hdeq' := congr_arg (-(·)) hdeq; simp at hdeq'
-        rw [← hdeq'] at hdpos 
+        rw [← hdeq'] at hdpos
         change 0 < equivRat (b + (-a)) at hdpos
         rw [Rat.equivRat_add] at hdpos
-        rw [Rat.equivRat_neg] at hdpos 
+        rw [Rat.equivRat_neg] at hdpos
         linarith [hdpos]
       · have heq' := congr_arg equivRat heq
         linarith [heq']
@@ -1191,18 +1191,18 @@ abbrev Rat.equivRat_order : Rat ≃o ℚ where
 /-- Not in textbook: equivalence preserves ring operations -/
 abbrev Rat.equivRat_ring : Rat ≃+* ℚ where
   toEquiv := equivRat
-  map_add' := by 
-    intro x y 
-    obtain ⟨x₁, x₂, hx, rfl⟩ := Rat.eq_diff x 
-    obtain ⟨y₁, y₂, hy, rfl⟩ := Rat.eq_diff y 
+  map_add' := by
+    intro x y
+    obtain ⟨x₁, x₂, hx, rfl⟩ := Rat.eq_diff x
+    obtain ⟨y₁, y₂, hy, rfl⟩ := Rat.eq_diff y
     show equivRat (x₁ // x₂ + y₁ // y₂) = equivRat (x₁ // x₂) + equivRat (y₁ // y₂)
     rw [Rat.equivRat_add]
-  map_mul' := by 
-    intro x y 
-    obtain ⟨x₁, x₂, hx, rfl⟩ := Rat.eq_diff x 
-    obtain ⟨y₁, y₂, hy, rfl⟩ := Rat.eq_diff y 
+  map_mul' := by
+    intro x y
+    obtain ⟨x₁, x₂, hx, rfl⟩ := Rat.eq_diff x
+    obtain ⟨y₁, y₂, hy, rfl⟩ := Rat.eq_diff y
     show equivRat (x₁ // x₂ * y₁ // y₂) = equivRat (x₁ // x₂) * equivRat (y₁ // y₂)
-    sorry
+    rw [Rat.equivRat_mul]
 
 /--
   (Not from textbook) The textbook rationals are isomorphic (as a field) to the Mathlib rationals.

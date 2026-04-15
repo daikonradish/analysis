@@ -460,37 +460,69 @@ example (x:ℚ): x^(-3:ℤ) = 1/(x*x*x) := by convert zpow_neg x 3; ring
 
 theorem pow_eq_zpow (x:ℚ) (n:ℕ): x^(n:ℤ) = x^n := zpow_natCast x n
 
+theorem zpow_add_nonneg (x:ℚ) (n m:ℤ) (hn0 : n ≥ 0) (hm0 : m ≥ 0) : x^n * x^m = x^(n+m) := by
+  lift n to ℕ using (by omega)
+  lift m to ℕ using (by omega)
+  have hpow := pow_add x m n
+  exact_mod_cast hpow
+
+lemma zpow_add' (x:ℚ) (n m:ℤ) (hx: x ≠ 0) (hn0 : n ≥ 0) (hm0 : m < 0) : x^n * x^m = x^(n+m) := by
+  rw [← neg_neg m]
+  set q := -m
+  have hqpos : q > 0 := by linarith
+  have hqint := @Int.toNat_of_nonneg q (by linarith)
+  rw [← hqint]
+  set q' := Int.toNat q
+  lift n to ℕ using (by omega)
+  by_cases hsplit : n ≥ q'
+  · obtain ⟨d, hd⟩ := Nat.exists_eq_add_of_le hsplit
+    rw [hd]
+    push_cast
+    ring_nf
+    rw [zpow_neg, ← zpow_add_nonneg x q' d (by omega) (by omega)]
+    field_simp
+    norm_cast
+  · push_neg at hsplit
+    obtain ⟨d, hd⟩ := Nat.exists_eq_add_of_lt hsplit
+    rw [add_assoc] at hd
+    rw [zpow_neg]
+    field_simp
+    set d' := d + 1
+    --norm_cast
+    rw [hd]
+    push_cast
+    ring_nf
+    rw [zpow_neg]
+    field_simp
+    rw [pow_eq_zpow]
+
 /-- Proposition 4.3.12(a) (Properties of exponentiation, II) / Exercise 4.3.4 -/
 theorem zpow_add (x:ℚ) (n m:ℤ) (hx: x ≠ 0): x^n * x^m = x^(n+m) := by
-  cases n with
-  | ofNat n   =>
-    cases m with
-    | ofNat m   =>
-      simp only [Int.ofNat_eq_natCast]
-      exact pow_add x m n
-    | negSucc m =>
-      simp only [Int.ofNat_eq_natCast, Int.negSucc_eq]
-      rw [show (↑m + 1 : ℤ) = ↑(m+1) by push_cast; ring]
+  by_cases hn0 : 0 ≤ n
+  · by_cases hm0 : 0 ≤ m
+    · exact zpow_add_nonneg x n m hn0 hm0
+    · push_neg at hm0
+      exact zpow_add' x n m hx hn0 hm0
+  · by_cases hm0 : 0 ≤ m
+    · push_neg at hn0
+      rw [mul_comm, add_comm]
+      exact zpow_add' x m n hx hm0 hn0
+    · push_neg at hn0 hm0
+      rw [← neg_neg n, ← neg_neg m, ← neg_add]
+      set n' := -n
+      set m' := -m
+      have hn'pos : n' > 0 := by linarith
+      have hm'pos : m' > 0 := by linarith
+      have hn'int := @Int.toNat_of_nonneg n' (by linarith)
+      have hm'int := @Int.toNat_of_nonneg m' (by linarith)
+      rw [← hn'int, ← hm'int]
+      set n'' := Int.toNat n'
+      set m'' := Int.toNat m'
+      rw [zpow_neg, zpow_neg]
+      norm_cast
       rw [zpow_neg]
-      by_cases h : n ≤ m
-      · rw [show (↑n : ℤ) + -↑(m+1) = -↑(m+1-n) by push_cast; omega]
-        field_simp [hx]
-        rw [zpow_neg, pow_eq_zpow, ← zpow_natCast x (m+1)]
-        rw [← pow_eq_zpow x n]
-        rw [← zpow_neg x (m+1-n)]
-        rw [zpow_neg]
-        rw [one_div, ← div_eq_mul_inv]
-        rw [pow_eq_zpow x (m+1)]
-        rw [eq_div_iff (pow_ne_zero (m+1-n) hx)]
-        rw [pow_eq_zpow x n]
-        rw [pow_add]
-        congr 1
-        · omega
-      · sorry
-  | negSucc n' =>
-    cases m with
-    | ofNat m'   => sorry
-    | negSucc m' => sorry
+      rw [one_div_mul_one_div]
+      rw [pow_add]
 
 /-- Proposition 4.3.12(a) (Properties of exponentiation, II) / Exercise 4.3.4 -/
 theorem zpow_mul (x:ℚ) (n m:ℤ) : (x^n)^m = x^(n*m) := by
