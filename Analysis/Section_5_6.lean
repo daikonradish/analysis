@@ -562,22 +562,80 @@ theorem Real.eq_root_iff_pow_eq {x y:Real} (hx: x ≥ 0) (hy: y ≥ 0) {n:ℕ} (
         have h'' := Real.pow_gt_pow z y n h' hy (by linarith)
         linarith
       exact csSup_le (Real.rootset_nonempty hx n hn) hylb
-#check csSup_le
+
 
 /-- Lemma 5.6.6 (c) / Exercise 5.6.1 -/
-theorem Real.root_nonneg {x:Real} (hx: x ≥ 0) {n:ℕ} (hn: n ≥ 1) : x.root n ≥ 0 := by sorry
+theorem Real.root_nonneg {x:Real} (hx: x ≥ 0) {n:ℕ} (hn: n ≥ 1) : x.root n ≥ 0 := by
+  rw [Real.root]
+  have hmem : 0 ∈ {y | y ≥ 0 ∧ y ^ n ≤ x} := by
+    simp_all
+    have : (0:Real) ^ n = 0 := by exact (pow_eq_zero 0 n hn).mpr rfl
+    rw [this]
+    exact hx
+  exact le_csSup (Real.rootset_bddAbove n hn) hmem
 
-/-- Lemma 5.6.6 (c) / Exercise 5.6.1 -/
-theorem Real.root_pos {x:Real} (hx: x ≥ 0) {n:ℕ} (hn: n ≥ 1) : x.root n > 0 ↔ x > 0 := by sorry
 
 theorem Real.pow_of_root {x:Real} (hx: x ≥ 0) {n:ℕ} (hn: n ≥ 1) :
-  (x.root n)^n = x := by sorry
+  (x.root n)^n = x := by
+  have hrootge0 := Real.root_nonneg hx hn
+  exact Real.eq_root_if_pow_eq hx hrootge0 hn rfl
+
+/-- Lemma 5.6.6 (c) / Exercise 5.6.1 -/
+theorem Real.root_pos {x:Real} (hx: x ≥ 0) {n:ℕ} (hn: n ≥ 1) : x.root n > 0 ↔ x > 0 := by
+  have h0pow : (0:Real) ^ n = 0 := by exact (pow_eq_zero 0 n hn).mpr rfl
+  constructor
+  · intro hroot
+    -- theorem Real.pow_gt_pow (x y:Real) (n:ℕ) (hxy: x > y) (hy: y ≥ 0) (hn: n > 0) : x^n > y^n := by
+    have hpow := Real.pow_gt_pow _ 0 n hroot (by linarith) (by linarith)
+    rw [Real.pow_of_root hx hn, h0pow] at hpow
+    exact hpow
+  · intro hxpos
+    have hnonneg := Real.root_nonneg hx hn
+    by_contra! h'
+    have heq0 : x.root n = 0 := by linarith
+    have heq0pow := congrArg (λ expr => expr ^ n) heq0; dsimp at heq0pow
+    rw [Real.pow_of_root hx hn, h0pow] at heq0pow
+    linarith
+
 
 theorem Real.root_of_pow {x:Real} (hx: x ≥ 0) {n:ℕ} (hn: n ≥ 1) :
-  (x^n).root n = x := by sorry
+  (x^n).root n = x := by
+  rw [Real.root]
+  have hbdd : ∀ z ∈ {y | y ≥ 0 ∧ y ^ n ≤ x ^ n}, z ≤ x := by
+    intro z hz
+    simp at hz
+    obtain ⟨hlb, hub⟩ := hz
+    by_contra! h'
+    have hpow := Real.pow_gt_pow z x n h' hx (by linarith)
+    linarith
+  have hxpowge0 : x ^ n ≥ 0 := by positivity
+  have hmem : x ∈  {y | y ≥ 0 ∧ y ^ n ≤ x ^ n} := by
+    simp
+    linarith
+  have hbdabve : BddAbove {y | y ≥ 0 ∧ y ^ n ≤ x ^ n} := by
+    use x
+    intro y hy
+    simp at hy
+    obtain ⟨hlb, hub⟩ := hy
+    by_contra! h'
+    have hpow := Real.pow_gt_pow y x n h' hx (by linarith)
+    linarith
+  apply le_antisymm
+  · exact csSup_le (Real.rootset_nonempty hxpowge0 n hn) hbdd
+  · exact le_csSup hbdabve hmem
 
 /-- Lemma 5.6.6 (d) / Exercise 5.6.1 -/
-theorem Real.root_mono {x y:Real} (hx: x ≥ 0) (hy: y ≥ 0) {n:ℕ} (hn: n ≥ 1) : x > y ↔ x.root n > y.root n := by sorry
+theorem Real.root_mono {x y:Real} (hx: x ≥ 0) (hy: y ≥ 0) {n:ℕ} (hn: n ≥ 1) : x > y ↔ x.root n > y.root n := by
+  constructor
+  · intro hxy
+    by_contra! h'
+    have hpow := Real.pow_ge_pow (y.root n) (x.root n) n h' (Real.root_nonneg hx hn)
+    rw [Real.pow_of_root hx hn, Real.pow_of_root hy hn] at hpow
+    linarith
+  · intro hrootxy
+    have hpow := Real.pow_gt_pow (x.root n) (y.root n) n hrootxy (Real.root_nonneg hy hn) (by linarith)
+    rw [Real.pow_of_root hx hn, Real.pow_of_root hy hn] at hpow
+    exact hpow
 
 /-- Lemma 5.6.6 (e) / Exercise 5.6.1 -/
 theorem Real.root_mono_of_gt_one {x : Real} (hx: x > 1) {k l: ℕ} (hkl: k > l) (hl: l ≥ 1) : x.root k < x.root l := by sorry
