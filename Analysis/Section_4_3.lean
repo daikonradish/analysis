@@ -460,13 +460,13 @@ example (x:ℚ): x^(-3:ℤ) = 1/(x*x*x) := by convert zpow_neg x 3; ring
 
 theorem pow_eq_zpow (x:ℚ) (n:ℕ): x^(n:ℤ) = x^n := zpow_natCast x n
 
-theorem zpow_add_nonneg (x:ℚ) (n m:ℤ) (hn0 : n ≥ 0) (hm0 : m ≥ 0) : x^n * x^m = x^(n+m) := by
+lemma zpow_add_nonneg (x:ℚ) (n m:ℤ) (hn0 : n ≥ 0) (hm0 : m ≥ 0) : x^n * x^m = x^(n+m) := by
   lift n to ℕ using (by omega)
   lift m to ℕ using (by omega)
   have hpow := pow_add x m n
   exact_mod_cast hpow
 
-lemma zpow_add' (x:ℚ) (n m:ℤ) (hx: x ≠ 0) (hn0 : n ≥ 0) (hm0 : m < 0) : x^n * x^m = x^(n+m) := by
+lemma zpow_add_nonneg_neg (x:ℚ) (n m:ℤ) (hx: x ≠ 0) (hn0 : n ≥ 0) (hm0 : m < 0) : x^n * x^m = x^(n+m) := by
   rw [← neg_neg m]
   set q := -m
   have hqpos : q > 0 := by linarith
@@ -502,11 +502,11 @@ theorem zpow_add (x:ℚ) (n m:ℤ) (hx: x ≠ 0): x^n * x^m = x^(n+m) := by
   · by_cases hm0 : 0 ≤ m
     · exact zpow_add_nonneg x n m hn0 hm0
     · push_neg at hm0
-      exact zpow_add' x n m hx hn0 hm0
+      exact zpow_add_nonneg_neg x n m hx hn0 hm0
   · by_cases hm0 : 0 ≤ m
     · push_neg at hn0
       rw [mul_comm, add_comm]
-      exact zpow_add' x m n hx hm0 hn0
+      exact zpow_add_nonneg_neg x m n hx hm0 hn0
     · push_neg at hn0 hm0
       rw [← neg_neg n, ← neg_neg m, ← neg_add]
       set n' := -n
@@ -524,28 +524,196 @@ theorem zpow_add (x:ℚ) (n m:ℤ) (hx: x ≠ 0): x^n * x^m = x^(n+m) := by
       rw [one_div_mul_one_div]
       rw [pow_add]
 
+lemma zpow_inv (x : ℚ) (n : ℕ) : (1 / x) ^ n = 1 / (x ^ n) := by
+  induction' n with n ih
+  · simp_all
+  · rw [← pow_add, ih]
+    field_simp
+    nth_rewrite 2 [← pow_one x]
+    rw [pow_add]
+
+lemma zpow_mul_nonneg (x:ℚ) (n m:ℤ)  (hn0 : n ≥ 0) (hm0 : m ≥ 0) : (x^n)^m = x^(n*m) := by
+  lift n to ℕ using (by omega)
+  lift m to ℕ using (by omega)
+  have hpm := pow_mul x m n
+  exact_mod_cast hpm
+
+lemma zpow_mul_nonneg_neg (x:ℚ) (n m:ℤ)  (hn0 : n ≥ 0) (hm0 : m < 0) : (x^n)^m = x^(n*m) := by
+  lift n to ℕ using (by omega)
+  rw [← neg_neg m]
+  set m' := -m
+  have hm'pos : m' > 0 := by linarith
+  have hm'int := @Int.toNat_of_nonneg m' (by linarith)
+  rw [← hm'int]
+  set m'' := Int.toNat m'
+  rw [zpow_neg, ← pow_eq_zpow _ m'', zpow_mul_nonneg x n m'' (by omega) (by omega)]
+  norm_cast
+  rw [← zpow_neg]
+  congr
+  grind
+
+lemma zpow_mul_neg_nonneg (x:ℚ) (n m:ℤ)  (hn0 : n < 0) (hm0 : m ≥ 0) : (x^n)^m = x^(n*m) := by
+  lift m to ℕ using (by omega)
+  rw [← neg_neg n]
+  set n' := -n
+  have hn'pos : n' > 0 := by linarith
+  have hn'int := @Int.toNat_of_nonneg n' (by linarith)
+  rw [← hn'int]
+  set n'' := Int.toNat n'
+  rw [zpow_neg, pow_eq_zpow, zpow_inv, pow_mul, ← zpow_neg]
+  congr
+  grind
+
 /-- Proposition 4.3.12(a) (Properties of exponentiation, II) / Exercise 4.3.4 -/
 theorem zpow_mul (x:ℚ) (n m:ℤ) : (x^n)^m = x^(n*m) := by
-  sorry
+  by_cases hn0 : 0 ≤ n
+  · by_cases hm0 : 0 ≤ m
+    · exact zpow_mul_nonneg x n m hn0 hm0
+    · push_neg at hm0
+      exact zpow_mul_nonneg_neg x n m hn0 hm0
+  · by_cases hm0 : 0 ≤ m
+    · push_neg at hn0
+      exact zpow_mul_neg_nonneg x n m hn0 hm0
+    · push_neg at hn0 hm0
+      conv =>
+        lhs
+        rw [← neg_neg n, ← neg_neg m]
+      have hmul : n * m = ((-n) * (-m)) := by ring
+      rw [hmul]
+      set n' := -n
+      set m' := -m
+      have hn'pos : n' > 0 := by linarith
+      have hm'pos : m' > 0 := by linarith
+      have hn'int := @Int.toNat_of_nonneg n' (by linarith)
+      have hm'int := @Int.toNat_of_nonneg m' (by linarith)
+      rw [← hn'int, ← hm'int]
+      set n'' := Int.toNat n'
+      set m'' := Int.toNat m'
+      rw [zpow_neg, zpow_neg]
+      rw [zpow_inv]
+      rw [← zpow_mul_nonneg x n'' m'' (by omega) (by omega)]
+      field_simp
+      norm_cast
+
 
 /-- Proposition 4.3.12(a) (Properties of exponentiation, II) / Exercise 4.3.4 -/
-theorem mul_zpow (x y:ℚ) (n:ℤ) : (x*y)^n = x^n * y^n := by sorry
+theorem mul_zpow (x y:ℚ) (n:ℤ) : (x*y)^n = x^n * y^n := by
+  by_cases hn0 : n ≥ 0
+  · lift n to ℕ using (by omega)
+    have hpow := mul_pow x y n
+    exact_mod_cast hpow
+  · push_neg at hn0
+    rw [← neg_neg n]
+    set n' := -n
+    have hn'pos : n' > 0 := by linarith
+    have hn'int := @Int.toNat_of_nonneg n' (by linarith)
+    rw [← hn'int]
+    set n'' := Int.toNat n'
+    rw [zpow_neg, mul_pow, ← one_div_mul_one_div_rev]
+    rw [← zpow_neg, ← zpow_neg]
+    rw [mul_comm]
 
 /-- Proposition 4.3.12(b) (Properties of exponentiation, II) / Exercise 4.3.4 -/
-theorem zpow_pos {x:ℚ} (n:ℤ) (hx: x > 0) : x^n > 0 := by sorry
+theorem zpow_pos {x:ℚ} (n:ℤ) (hx: x > 0) : x^n > 0 := by
+  by_cases hn0 : n ≥ 0
+  · lift n to ℕ using (by omega)
+    have hpow := pow_pos n hx
+    exact_mod_cast hpow
+  · push_neg at hn0
+    rw [← neg_neg n]
+    set n' := -n
+    have hn'pos : n' > 0 := by linarith
+    have hn'int := @Int.toNat_of_nonneg n' (by linarith)
+    rw [← hn'int]
+    set n'' := Int.toNat n'
+    rw [zpow_neg]
+    have hpow := pow_pos n'' hx
+    exact one_div_pos.mpr hpow
 
 /-- Proposition 4.3.12(b) (Properties of exponentiation, II) / Exercise 4.3.4 -/
-theorem zpow_ge_zpow {x y:ℚ} {n:ℤ} (hxy: x ≥ y) (hy: y > 0) (hn: n > 0): x^n ≥ y^n := by sorry
+theorem zpow_ge_zpow {x y:ℚ} {n:ℤ} (hxy: x ≥ y) (hy: y > 0) (hn: n > 0): x^n ≥ y^n := by
+  lift n to ℕ using (by omega)
+  have hpow := pow_ge_pow x y n hxy (by linarith)
+  exact_mod_cast hpow
 
 theorem zpow_ge_zpow_ofneg {x y:ℚ} {n:ℤ} (hxy: x ≥ y) (hy: y > 0) (hn: n < 0) : x^n ≤ y^n := by
-  sorry
+  rw [← neg_neg n]
+  set n' := -n
+  have hn'pos : n' > 0 := by linarith
+  have hn'int := @Int.toNat_of_nonneg n' (by linarith)
+  rw [← hn'int]
+  set n'' := Int.toNat n'
+  rw [zpow_neg, zpow_neg]
+  have hx : x > 0 := by linarith
+  have hxpowpos := zpow_pos n'' hx
+  have hypowpos := zpow_pos n'' hy
+  field_simp
+  have := pow_ge_pow x y n'' hxy (by linarith)
+  linarith
+
+theorem zpow_gt_zpow {x y:ℚ} {n:ℤ} (hxy: x > y) (hy: y > 0) (hn: n > 0): x^n > y^n := by
+  lift n to ℕ using (by omega)
+  have hpow := pow_gt_pow x y n hxy (by linarith) (by omega)
+  exact_mod_cast hpow
+
+theorem zpow_gt_zpow_ofneg {x y:ℚ} {n:ℤ} (hxy: x > y) (hy: y > 0) (hn: n < 0) : x^n < y^n := by
+  rw [← neg_neg n]
+  set n' := -n
+  have hn'pos : n' > 0 := by linarith
+  have hn'int := @Int.toNat_of_nonneg n' (by linarith)
+  rw [← hn'int]
+  set n'' := Int.toNat n'
+  rw [zpow_neg, zpow_neg]
+  have hx : x > 0 := by linarith
+  have hxpowpos := zpow_pos n'' hx
+  have hypowpos := zpow_pos n'' hy
+  field_simp
+  have := pow_gt_pow x y n'' hxy (by linarith) (by omega)
+  linarith
 
 /-- Proposition 4.3.12(c) (Properties of exponentiation, II) / Exercise 4.3.4 -/
 theorem zpow_inj {x y:ℚ} {n:ℤ} (hx: x > 0) (hy : y > 0) (hn: n ≠ 0) (hxy: x^n = y^n) : x = y := by
-  sorry
+  rcases n.lt_trichotomy 0 with (hneg | hzero | hpos)
+  · by_contra! h'
+    rcases lt_trichotomy x y with (hlt | heq | hgt)
+    · have hpow := @zpow_gt_zpow_ofneg y x n hlt hx hneg
+      linarith
+    · exact absurd heq h'
+    · have hpow := @zpow_gt_zpow_ofneg x y n hgt hy hneg
+      linarith
+  · exact absurd hzero hn
+  · rcases lt_trichotomy x y with (hlt | heq | hgt)
+    · have hpow := @zpow_gt_zpow y x n hlt hx hpos
+      linarith
+    · exact heq
+    · have hpow := @zpow_gt_zpow x y n hgt hy hpos
+      linarith
+
+lemma zpow_abs_inv {x : ℚ} : |1/x| = 1/|x| := by grind
 
 /-- Proposition 4.3.12(d) (Properties of exponentiation, II) / Exercise 4.3.4 -/
-theorem zpow_abs (x:ℚ) (n:ℤ) : |x|^n = |x^n| := by sorry
+theorem zpow_abs (x:ℚ) (n:ℤ) : |x|^n = |x^n| := by
+  by_cases hn0 : n ≥ 0
+  · lift n to ℕ using (by omega)
+    have hpow := pow_abs x n
+    exact_mod_cast hpow
+  · rw [← neg_neg n]
+    set n' := -n
+    have hn'pos : n' > 0 := by linarith
+    have hn'int := @Int.toNat_of_nonneg n' (by linarith)
+    rw [← hn'int]
+    set n'' := Int.toNat n'
+    rw [zpow_neg, zpow_neg]
+    grind
 
 /-- Exercise 4.3.5 -/
-theorem two_pow_geq (N:ℕ) : 2^N ≥ N := by sorry
+theorem two_pow_geq (N:ℕ) : 2^N ≥ N := by
+  induction N with
+  | zero      => simp
+  | succ n ih =>
+    cases n with
+    | zero    => simp
+    | succ n' =>
+      simp
+      rw [pow_succ']
+      omega
