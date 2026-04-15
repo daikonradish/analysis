@@ -196,11 +196,6 @@ theorem Real.not_zero_pos (x:Real) : ¬(x = 0 ∧ x.IsPos) := by
   specialize hN₀ N₀ (by linarith); simp at hN₀
   specialize hBdd N₀
   grind
-/-
-theorem Real.isPos_def (x:Real) :
-    IsPos x ↔ ∃ a:ℕ → ℚ, BoundedAwayPos a ∧ (a:Sequence).IsCauchy ∧ x = LIM a := by rfl
--/
-
 
 theorem Real.nonzero_of_pos {x:Real} (hx: x.IsPos) : x ≠ 0 := by
   have := not_zero_pos x
@@ -993,15 +988,6 @@ theorem Real.LIM_of_le {x:Real} {a:ℕ → ℚ} (hcauchy: (a:Sequence).IsCauchy)
   have hcont := Real.LIM_mono hcauchy (Sequence.IsCauchy.const q) hle
   rw [← Real.ratCast_def] at hcont
   linarith
-
-/-
-theorem Real.LIM_mono {a b:ℕ → ℚ} (ha: (a:Sequence).IsCauchy) (hb: (b:Sequence).IsCauchy)
-  (hmono: ∀ n, a n ≤ b n) :
-    LIM a ≤ LIM b := by
-  -- This proof is written to follow the structure of the original text.
-  have := LIM_of_nonneg (a := b - a) (by intro n; simp [hmono n]) (Sequence.IsCauchy.sub hb ha)
-  rw [←Real.LIM_sub hb ha] at this; linarith
--/
 
 /-- Exercise 5.4.8 -/
 theorem Real.LIM_of_ge {x:Real} {a:ℕ → ℚ} (hcauchy: (a:Sequence).IsCauchy) (h: ∀ n, a n ≥ x) :
