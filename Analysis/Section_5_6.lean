@@ -891,64 +891,252 @@ theorem Real.ratPow_ratPow {x:Real} (hx: x > 0) (q r:ℚ) : (x^q)^r = x^(q*r) :=
       alternatively
   conv =>
     lhs
-    rw [hq₂, @Real.ratPow_def (x ^ q) (Real.ratPow_pos (by linarith ) q) _ _ (by linarith)]
-    -- Chapter5.Real.zpow_mul (x : Real) (n m : ℤ) : (x ^ n) ^ m = x ^ (n * m)
     rw [
-      mul_comm, Real.zpow_mul, mul_comm, mul_assoc, ← Real.zpow_mul,
-      Real.pow_eq_pow, Real.pow_of_root (by linarith [Real.ratPow_pos hx q]) (by linarith)
-    ]
-    rw [hq₁, @Real.ratPow_def x (by linarith) _ _ (by linarith)]
-    rw [
-      Real.zpow_mul, mul_comm, mul_assoc,
-      ← Real.zpow_mul, Real.pow_eq_pow,
-      Real.pow_of_root (by linarith) (by linarith), mul_comm
+      hq₂,
+      @Real.ratPow_def (x ^ q) (Real.ratPow_pos (by linarith ) q) _ _ (by linarith),
+      mul_comm,
+      Real.zpow_mul,
+      mul_comm, mul_assoc,
+      ← Real.zpow_mul,
+      Real.pow_eq_pow,
+      Real.pow_of_root (by linarith [Real.ratPow_pos hx q]) (by linarith),
+      hq₁,
+      @Real.ratPow_def x (by linarith) _ _ (by linarith),
+      Real.zpow_mul,
+      mul_comm, mul_assoc,
+      ← Real.zpow_mul,
+      Real.pow_eq_pow,
+      Real.pow_of_root (by linarith) (by linarith),
+      mul_comm
     ]
   have hqr : q * r = ((n₁ * n₂) : ℤ) / ((d₁ * d₂):ℕ) := by
     rw [hq₁, hq₂]
     field_simp
     norm_cast
     ring
-  have hawkward : (d₁:ℤ) * (d₂:ℤ) = (((d₁ * d₂):ℕ):ℤ) := by
-    norm_cast
+  have hawkward : (d₁:ℤ) * (d₂:ℤ) = (((d₁ * d₂):ℕ):ℤ) := by norm_cast
   conv =>
     rhs
-    rw [hqr, @Real.ratPow_def x hx _ _ (by nlinarith)]
     rw [
-      Real.zpow_mul, mul_comm (n₁ * n₂) _, ← Real.zpow_mul,
-      hawkward, Real.pow_eq_pow, Real.pow_of_root (by linarith) (by nlinarith)]
+      hqr,
+      @Real.ratPow_def x hx _ _ (by nlinarith),
+      Real.zpow_mul, mul_comm (n₁ * n₂) _,
+      ← Real.zpow_mul,
+      hawkward,
+      Real.pow_eq_pow,
+      Real.pow_of_root (by linarith) (by nlinarith)
+    ]
 
 /-- Lemma 5.6.9(c) / Exercise 5.6.2 -/
 theorem Real.ratPow_neg {x:Real} (hx: x > 0) (q:ℚ) : x^(-q) = 1 / x^q := by
-  sorry
+  have hq : -q = q * (-(1:ℕ):ℤ) := by simp
+  have hratpow := @Real.ratPow_eq_pow (x ^ q) (Real.ratPow_pos hx q) (-(1:ℕ))
+  rw [hq, ← Real.ratPow_ratPow hx _ _, hratpow]
+  rw [Real.zpow_neg]
+  rw [pow_one]
 
 /-- Lemma 5.6.9(d) / Exercise 5.6.2 -/
 theorem Real.ratPow_mono {x y:Real} (hx: x > 0) (hy: y > 0) {q:ℚ} (h: q > 0) : x > y ↔ x^q > y^q := by
-  sorry
+  obtain ⟨n, d, dpos, hq⟩ := Rat.eq_quot q
+  rw [hq]
+  rw [@Real.ratPow_def x hx n d dpos, @Real.ratPow_def y hy n d dpos]
+  have npos : n > 0 := by
+      field_simp at hq
+      qify at dpos
+      have : (n:ℚ) > 0 := by nlinarith
+      exact_mod_cast this
+  lift n to ℕ using (by omega)
+  rw [Real.pow_eq_pow, Real.pow_eq_pow]
+  have hxyroot := (@Real.root_mono x y (by linarith) (by linarith) d (by linarith))
+  have hxrootpos := (@Real.root_pos x (by linarith) d (by linarith)).mpr hx
+  have hyrootpos := (@Real.root_pos y (by linarith) d (by linarith)).mpr hy
+  rw [hxyroot]
+  constructor
+  · intro hxy
+    exact @Real.pow_gt_pow (x.root d) (y.root d) n hxy (by linarith) (by linarith)
+  · intro hxy
+    have := (@Real.root_mono
+                (x.root d ^ n)
+                (y.root d ^ n)
+                (Real.pow_nonneg n (by linarith))
+                (Real.pow_nonneg n (by linarith))
+                n
+                (by linarith)
+            ).mp hxy
+    rwa [
+      @Real.root_of_pow (x.root d) (by linarith) n (by linarith),
+      @Real.root_of_pow (y.root d) (by linarith) n (by linarith)
+    ] at this
+
 
 /-- Lemma 5.6.9(e) / Exercise 5.6.2 -/
+-- need lemma : if x > 1,
+
+lemma Real.ratPow_zero_eq_one {x:Real} : x ^ (0:ℚ) = 1 := by
+   have := Real.pow_zero x
+   norm_cast at this
+
+lemma Real.ratPow_of_one_eq_one {q : ℚ}: (1:Real) ^ q = 1 := by
+  obtain ⟨n, d, hdpos, hq⟩ := Rat.eq_quot q
+  rw [hq]
+  rw [@Real.ratPow_def _ (by linarith) n d hdpos]
+  rw [Real.root_of_one (by linarith)]
+  simp_all
+
 theorem Real.ratPow_mono_of_gt_one {x:Real} (hx: x > 1) {q r:ℚ} : x^q > x^r ↔ q > r := by
-  sorry
+  constructor
+  · obtain ⟨n₁, d₁, hd₁pos, hq₁⟩ := Rat.eq_quot q
+    obtain ⟨n₂, d₂, hd₂pos, hq₂⟩ := Rat.eq_quot r
+    intro h
+    have hxqpos := @Real.ratPow_pos x (by linarith) q
+    have hxrpos := @Real.ratPow_pos x (by linarith) r
+    have hawkward : (d₁:ℚ) * (d₂:ℚ) = (((d₁ * d₂):ℕ):ℚ) := by norm_cast
+    have hineq := @Real.pow_gt_pow (x^q) (x^r) (d₁ * d₂) h (by linarith) (by nlinarith)
+    rw [← Real.pow_eq_pow (x^q) (d₁ * d₂), ← Real.pow_eq_pow (x^r) (d₁ * d₂)] at hineq
+    rw [← Real.ratPow_eq_pow hxqpos ((d₁ * d₂):ℕ), ← Real.ratPow_eq_pow hxrpos ((d₁ * d₂):ℕ)] at hineq
+    norm_cast at hineq
+    rw [← hawkward] at hineq
+    rw [@Real.ratPow_ratPow x (by linarith) q _, @Real.ratPow_ratPow x (by linarith) r _] at hineq
+    rw [hq₁, hq₂] at hineq
+    field_simp at hineq
+    have hnqpos := @Real.ratPow_pos x (by linarith) (-(n₂ * d₁))
+    have hineq' := mul_lt_mul_of_pos_right hineq hnqpos
+    rw [← @Real.ratPow_add x (by linarith) _ _, ← @Real.ratPow_add x (by linarith) _ _] at hineq'
+    ring_nf at hineq'
+    rw [Real.ratPow_zero_eq_one] at hineq'
+    norm_cast at hineq'
+    rcases lt_trichotomy ((↑(-(n₂ * (d₁:ℤ)) + (d₂:ℤ) * n₁)):ℚ) 0 with (hneg | hzero | hpos)
+    · norm_cast at hneg
+      have hneg' := neg_pos.mpr hneg
+      set δ:ℤ := (-(n₂ * (d₁:ℤ)) + (d₂:ℤ) * n₁)
+      rw [← neg_neg δ, Real.ratPow_eq_pow (by linarith) _] at hineq'
+      set β := -δ
+      have hβpos : β > 0 := by linarith
+      have hβint := @Int.toNat_of_nonneg β (by linarith)
+      rw [← hβint] at hineq'
+      set β' := Int.toNat β
+      rw [Real.zpow_neg] at hineq'
+      field_simp at hineq'
+      have hgt := Real.pow_gt_pow x 1 β' hx (by linarith) (by linarith); simp at hgt
+      linarith only [hineq', hgt]
+    · rw [hzero, Real.ratPow_zero_eq_one] at hineq'
+      linarith only [hineq']
+    · rw [hq₁, hq₂]
+      field_simp
+      norm_cast at hpos ⊢
+      linarith
+  · intro hqr
+    have hpos : q - r > 0 := by linarith
+    have hrfl : q = (q - r) + r := by linarith
+    rw [hrfl, Real.ratPow_add (by linarith)]
+    have hmono := (@Real.ratPow_mono x 1 (by linarith) (by linarith) (q - r) hpos).mp (by linarith)
+    rw [Real.ratPow_of_one_eq_one] at hmono
+    nth_rewrite 2 [← one_mul (x^r)]
+    gcongr
+    exact @Real.ratPow_pos x (by linarith) r
+
 
 /-- Lemma 5.6.9(e) / Exercise 5.6.2 -/
 theorem Real.ratPow_mono_of_lt_one {x:Real} (hx0: 0 < x) (hx: x < 1) {q r:ℚ} : x^q > x^r ↔ q < r := by
-  sorry
+  constructor
+  · obtain ⟨n₁, d₁, hd₁pos, hq₁⟩ := Rat.eq_quot q
+    obtain ⟨n₂, d₂, hd₂pos, hq₂⟩ := Rat.eq_quot r
+    intro h
+    have hxqpos := @Real.ratPow_pos x (by linarith) q
+    have hxrpos := @Real.ratPow_pos x (by linarith) r
+    have hawkward : (d₁:ℚ) * (d₂:ℚ) = (((d₁ * d₂):ℕ):ℚ) := by norm_cast
+    have hineq := @Real.pow_gt_pow (x^q) (x^r) (d₁ * d₂) h (by linarith) (by nlinarith)
+    rw [← Real.pow_eq_pow (x^q) (d₁ * d₂), ← Real.pow_eq_pow (x^r) (d₁ * d₂)] at hineq
+    rw [← Real.ratPow_eq_pow hxqpos ((d₁ * d₂):ℕ), ← Real.ratPow_eq_pow hxrpos ((d₁ * d₂):ℕ)] at hineq
+    norm_cast at hineq
+    rw [← hawkward] at hineq
+    rw [@Real.ratPow_ratPow x (by linarith) q _, @Real.ratPow_ratPow x (by linarith) r _] at hineq
+    rw [hq₁, hq₂] at hineq
+    field_simp at hineq
+    have hnqpos := @Real.ratPow_pos x (by linarith) (-(n₂ * d₁))
+    have hineq' := mul_lt_mul_of_pos_right hineq hnqpos
+    rw [← @Real.ratPow_add x (by linarith) _ _, ← @Real.ratPow_add x (by linarith) _ _] at hineq'
+    ring_nf at hineq'
+    rw [Real.ratPow_zero_eq_one] at hineq'
+    norm_cast at hineq'
+    rcases lt_trichotomy ((↑(-(n₂ * (d₁:ℤ)) + (d₂:ℤ) * n₁)):ℚ) 0 with (hneg | hzero | hpos)
+    · rw [hq₁, hq₂]
+      field_simp
+      norm_cast at hneg ⊢
+      linarith
+    · rw [hzero, Real.ratPow_zero_eq_one] at hineq'
+      linarith only [hineq']
+    · norm_cast at hpos
+      set δ : ℤ := (-(n₂ * (d₁:ℤ)) + (d₂:ℤ) * n₁)
+      rw [Real.ratPow_eq_pow (by linarith) _] at hineq'
+      have hgt := @Real.zpow_gt_zpow 1 x δ hx (by linarith) (by linarith); simp at hgt
+      linarith only [hgt, hineq']
+  · intro hqr
+    have hpos : r - q > 0 := by linarith
+    have hrfl : r = (r - q) + q := by linarith
+    rw [hrfl, Real.ratPow_add (by linarith)]
+    have hmono := (@Real.ratPow_mono 1 x (by linarith) (by linarith) (r - q) hpos).mp (by linarith)
+    rw [Real.ratPow_of_one_eq_one] at hmono
+    nth_rewrite 1 [← one_mul (x^q)]
+    gcongr
+    exact @Real.ratPow_pos x (by linarith) q
 
 /-- Lemma 5.6.9(f) / Exercise 5.6.2 -/
 theorem Real.ratPow_mul {x y:Real} (hx: x > 0) (hy: y > 0) (q:ℚ) : (x*y)^q = x^q * y^q := by
-  sorry
+  obtain ⟨n, d, dpos, hq⟩ := Rat.eq_quot q
+  nth_rewrite 1 [hq]
+  have hxrootpos := (@Real.root_pos x (by linarith) d (by linarith)).mpr hx
+  have hyrootpos := (@Real.root_pos y (by linarith) d (by linarith)).mpr hy
+  rw [@Real.ratPow_def (x * y) (by nlinarith) n d (by linarith)]
+  rw [@Real.root_mul x y (by linarith) (by linarith) d (by linarith)]
+  rw [@Real.mul_zpow (x.root d) (y.root d) n]
+  rw [
+    ← @Real.ratPow_def x (by nlinarith) n d (by linarith),
+    ← @Real.ratPow_def y (by nlinarith) n d (by linarith)
+  ]
+  rw [← hq]
+
 
 /-- Exercise 5.6.3 -/
-theorem Real.pow_even (x:Real) {n:ℕ} (hn: Even n) : x^n ≥ 0 := by sorry
+lemma Real.pow_square (x:Real) : x ^ 2 ≥ 0 := by
+  rw [Real.pow_succ, pow_one]
+  rcases Real.trichotomous' x 0 with (h | h | h)
+  · nlinarith
+  · nlinarith
+  · simp_all
+
+theorem Real.pow_even (x:Real) {n:ℕ} (hn: Even n) : x^n ≥ 0 := by
+  obtain ⟨k, hk⟩ := hn
+  rw [← two_mul, mul_comm] at hk
+  rw [hk]
+  rw [← Real.pow_mul x 2 k]
+  exact Real.pow_square (x^k)
 
 /-- Exercise 5.6.5 -/
 theorem Real.max_ratPow {x y:Real} (hx: x > 0) (hy: y > 0) {q:ℚ} (hq: q > 0) :
   max (x^q) (y^q) = (max x y)^q := by
-  sorry
+  simp [max_def]
+  rcases Real.trichotomous' x y with (h | h | h)
+  · have hpowxy := (@Real.ratPow_mono x y hx hy q hq).mp h
+    rw [if_neg (by linarith), if_neg (by linarith)]
+  · have hpowxy := (@Real.ratPow_mono y x hy hx q hq).mp h
+    rw [if_pos (by linarith), if_pos (by linarith)]
+  · have hxy : x ≤ y := by linarith
+    have hpowxy : x ^ q ≤ y ^ q := by rw [h]
+    simp_all
 
 /-- Exercise 5.6.5 -/
 theorem Real.min_ratPow {x y:Real} (hx: x > 0) (hy: y > 0) {q:ℚ} (hq: q > 0) :
   min (x^q) (y^q) = (min x y)^q := by
-  sorry
+  simp [min_def]
+  rcases Real.trichotomous' x y with (h | h | h)
+  · have hpowxy := (@Real.ratPow_mono x y hx hy q hq).mp h
+    rw [if_neg (by linarith), if_neg (by linarith)]
+  · have hpowxy := (@Real.ratPow_mono y x hy hx q hq).mp h
+    rw [if_pos (by linarith), if_pos (by linarith)]
+  · have hxy : x ≤ y := by linarith
+    have hpowxy : x ^ q ≤ y ^ q := by rw [h]
+    simp_all
 
 -- Final part of Exercise 5.6.5: state and prove versions of the above lemmas covering the case of negative q.
 
