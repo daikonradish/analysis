@@ -612,8 +612,6 @@ theorem Real.abs_eq_abs (x:Real) : |x| = abs x := by
     exact hpospos
 
 
-
-
 /-- Proposition 5.4.8 -/
 theorem Real.inv_of_pos {x:Real} (hx: x.IsPos) : x⁻¹.IsPos := by
   observe hnon: x ≠ 0
@@ -817,6 +815,10 @@ theorem Real.le_mul {ε:Real} (hε: ε.IsPos) (x:Real) : ∃ M:ℕ, M > 0 ∧ M 
     convert mul_lt_mul_right hN hε
     rw [isPos_iff] at hε; field_simp
   use 1; simp_all [isPos_iff]; linarith
+
+theorem Real.le_mul' {ε:Real} (hε: ε > 0) (x:Real) : ∃ M:ℕ, M > 0 ∧ M * ε > x := by
+  have hεpos : ε.IsPos := by exact (isPos_iff ε).mpr hε
+  exact Real.le_mul hεpos x
 
 lemma Real.ex544 {x : Real} (hx : x > 0) : ∃ n:ℕ, 0 < (1:ℚ)/n ∧ (1:ℚ)/n < x := by
   rw [Real.gt_iff, sub_zero] at hx

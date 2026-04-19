@@ -322,6 +322,33 @@ theorem Real.LIM_of_le' {x:Real} {a:ℕ → ℚ} (hcauchy: (a:Sequence).IsCauchy
   change LIM α ≤ q at hcontra
   linarith
 
+theorem Real.LIM_of_ge' {x:Real} {a:ℕ → ℚ} (hcauchy: (a:Sequence).IsCauchy)
+    (h: ∃ N, ∀ n ≥ N, x ≤ a n) : x ≤ LIM a := by
+  obtain ⟨N₀, hN₀⟩ := h
+  set α : ℕ → ℚ := fun n => a (n + N₀)
+  have hlimα : LIM a = LIM α := by
+    unfold α
+    exact Real.LIM_of_tail N₀ hcauchy
+  have hα : ∀ n : ℕ, x ≤ α n := by
+    intro n
+    unfold α
+    specialize hN₀ (n + N₀) (by linarith)
+    exact hN₀
+  rw [hlimα]
+  by_contra! h'
+  obtain ⟨q, hqlb, hqub⟩ := Real.rat_between h'
+  set β : ℕ → ℚ := fun _ => q
+  have hmono : ∀ n : ℕ, β n ≤ α n := by
+    intro n
+    specialize hα n
+    unfold β
+    have hreal : (q : Real) ≤ ((α n) : Real) := by linarith
+    exact_mod_cast hreal
+  have hcontra := Real.LIM_mono (Sequence.IsCauchy.const q) (Sequence.IsCauchy.tail a N₀ hcauchy) hmono
+  rw [← Real.ratCast_def] at hcontra
+  change q ≤ LIM α at hcontra
+  linarith
+
 
 theorem Rat.LIM_of_le {x : ℚ} {a : ℕ → ℚ}
   (hcauchy: (a:Sequence).IsCauchy) (h : ∀ (n : ℕ), a n ≤ x) : LIM a ≤ x := by

@@ -488,7 +488,6 @@ lemma zpow_add_nonneg_neg (x:ℚ) (n m:ℤ) (hx: x ≠ 0) (hn0 : n ≥ 0) (hm0 :
     rw [zpow_neg]
     field_simp
     set d' := d + 1
-    --norm_cast
     rw [hd]
     push_cast
     ring_nf
