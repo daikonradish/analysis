@@ -165,10 +165,32 @@ instance Chapter5.Sequence.inst_coe_sequence : Coe Chapter5.Sequence Sequence wh
 theorem Chapter5.coe_sequence_eval (a: Chapter5.Sequence) (n:ℤ) : (a:Sequence) n = (a n:ℝ) := rfl
 
 theorem Sequence.is_steady_of_rat (ε:ℚ) (a: Chapter5.Sequence) :
-    ε.Steady a ↔ (ε:ℝ).Steady (a:Sequence) := by sorry
+    ε.Steady a ↔ (ε:ℝ).Steady (a:Sequence) := by
+  rw [Rat.Steady]
+  rw [Real.Steady]
+  peel with n hn m hm
+  rw [Rat.Close, Real.Close, Real.dist_eq]
+  constructor
+  · intro hrat
+    push_cast
+    exact_mod_cast hrat
+  · intro hreal
+    push_cast at hreal
+    exact_mod_cast hreal
 
 theorem Sequence.is_eventuallySteady_of_rat (ε:ℚ) (a: Chapter5.Sequence) :
-    ε.EventuallySteady a ↔ (ε:ℝ).EventuallySteady (a:Sequence) := by sorry
+    ε.EventuallySteady a ↔ (ε:ℝ).EventuallySteady (a:Sequence) := by
+  peel with N hN
+  rw [Rat.Steady, Real.Steady]
+  peel with n hn m hm
+  simp at hn hm
+  simp_all
+  rw [Rat.Close, Rat.dist_eq]
+  constructor
+  · intro hrat
+    exact_mod_cast hrat
+  · intro hreal
+    exact_mod_cast hreal
 
 /-- Proposition 6.1.4 -/
 theorem Sequence.isCauchy_of_rat (a: Chapter5.Sequence) : a.IsCauchy ↔ (a:Sequence).IsCauchy := by
@@ -229,7 +251,27 @@ theorem Sequence.tendsTo_def (a:Sequence) (L:ℝ) :
 
 /-- Exercise 6.1.2 -/
 theorem Sequence.tendsTo_iff (a:Sequence) (L:ℝ) :
-  a.TendsTo L ↔ ∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - L| ≤ ε := by sorry
+  a.TendsTo L ↔ ∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - L| ≤ ε := by
+  peel with ε hε
+  rw [Real.EventuallyClose]
+  constructor
+  · intro hseq
+    obtain ⟨N, hNam, hεcl⟩ := hseq
+    use N
+    intro n hn
+    rw [Real.closeSeq_def] at hεcl
+    specialize hεcl n (by grind)
+    rwa [Sequence.from_eval (a:Sequence) hn, Real.dist_eq] at hεcl
+  · intro habs
+    obtain ⟨N, hN⟩ := habs
+    use max a.m N
+    constructor
+    · grind
+    · rw [Real.closeSeq_def]
+      intro n hn
+      simp at hn
+      specialize hN n (by grind)
+      rwa [Sequence.from_eval (a:Sequence) (by grind), Real.dist_eq]
 
 noncomputable def seq_6_1_6 : Sequence := (fun (n:ℕ) ↦ 1-(10:ℝ)^(-(n:ℤ)-1):Sequence)
 
@@ -248,13 +290,56 @@ example : (0.1:ℝ).CloseSeq seq_6_1_6 1 := by
 
 /-- Examples 6.1.6 -/
 example : ¬ (0.01:ℝ).CloseSeq seq_6_1_6 1 := by
-  intro h; specialize h 0 (by positivity); simp [seq_6_1_6] at h; norm_num at h
+  intro h
+  specialize h 0 (by positivity); simp [seq_6_1_6] at h; norm_num at h
 
 /-- Examples 6.1.6 -/
-example : (0.01:ℝ).EventuallyClose seq_6_1_6 1 := by sorry
+example : (0.01:ℝ).EventuallyClose seq_6_1_6 1 := by
+  rw [Real.eventuallyClose_def]
+  use 2
+  constructor
+  · simp [seq_6_1_6]
+  · rw [Real.closeSeq_def]
+    intro n hn
+    rw [Sequence.from_eval (seq_6_1_6:Sequence) (by grind)]
+    simp at hn
+    simp [seq_6_1_6]
+    simp_all
+    rw [if_pos (by linarith)]
+    rw [Real.dist_eq, abs_sub_comm, abs_of_nonneg (by
+      rw [sub_nonneg]
+      rw (occs := .pos [2]) [show (1:ℝ) = 1 - 0 by norm_num]
+      gcongr
+      positivity
+    ), sub_sub_cancel, show (0.01:ℝ) = (10:ℝ)^(-2:ℤ) by norm_num]
+    gcongr <;> grind
+
 
 /-- Examples 6.1.6 -/
-example : seq_6_1_6.TendsTo 1 := by sorry
+example : seq_6_1_6.TendsTo 1 := by
+  intro ε hε
+  obtain ⟨N, hN⟩ := exists_pow_lt_of_lt_one hε (by norm_num : (10:ℝ)^(-1:ℤ) < 1)
+  use N
+  constructor
+  · simp [seq_6_1_6]
+  · intro n hn
+    rw [Sequence.from_eval (seq_6_1_6:Sequence) (by grind)]
+    simp at hn
+    simp [seq_6_1_6]
+    rw [if_pos (by linarith)]
+    rw [@Int.max_eq_left n 0 (by omega)]
+    rw [Real.dist_eq, abs_sub_comm, abs_of_nonneg (by
+      rw [sub_nonneg]
+      rw (occs := .pos [2]) [show (1:ℝ) = 1 - 0 by norm_num]
+      gcongr
+      positivity
+    ), sub_sub_cancel]
+    rw [← zpow_natCast, ← zpow_mul] at hN
+    rw [neg_one_mul] at hN
+    have := calc 10 ^ (-n-1) ≤ 10 ^ (-(N:ℤ)) := by gcongr <;> grind
+                           _ < ε             := by exact hN
+    linarith
+
 
 /-- Proposition 6.1.7 (Uniqueness of limits) -/
 theorem Sequence.tendsTo_unique (a:Sequence) {L L':ℝ} (h:L ≠ L') :
@@ -338,20 +423,90 @@ theorem Sequence.lim_harmonic :
 
 /-- Proposition 6.1.12 / Exercise 6.1.5 -/
 theorem Sequence.IsCauchy.convergent {a:Sequence} (h:a.Convergent) : a.IsCauchy := by
-  sorry
+  intro ε hε
+  obtain ⟨L, hL⟩ := h
+  obtain ⟨N, hNam, hNcl⟩ := hL (ε/2) (by positivity)
+  use N
+  constructor
+  · exact hNam
+  · intro n hn m hm
+    simp at hn hm
+    have hncl := hNcl n (by grind)
+    have hmcl := hNcl m (by grind)
+    rw [Sequence.from_eval (a:Sequence) hn.2, Sequence.from_eval (a:Sequence) hm.2] at *
+    rw [Real.close_def, Real.dist_eq] at *
+    calc |a.seq n - a.seq m| = |a.seq n - L + (L - a.seq m)| := by ring_nf
+                           _ ≤ |a.seq n - L| + |L - a.seq m| := by exact abs_add_le _ _
+                           _ = |a.seq n - L| + |a.seq m - L| := by congr 1; rw [abs_sub_comm _ _]
+                           _ ≤ ε                             := by grind
 
 /-- Example 6.1.13 -/
-example : ¬ (0.1:ℝ).EventuallySteady ((fun n ↦ (-1:ℝ)^n):Sequence) := by sorry
+lemma example6113part1 : ¬ (0.1:ℝ).EventuallySteady ((fun n ↦ (-1:ℝ)^n):Sequence) := by
+  intro hevsteady
+  obtain ⟨N, hN, hsteady⟩ := hevsteady
+  simp at hN
+  specialize hsteady N (by grind) (N+1) (by grind)
+  rw [Sequence.from_eval _ (by grind), Sequence.from_eval _ (by grind)] at hsteady
+  simp at hsteady
+  rw [if_pos hN, if_pos (by linarith)] at hsteady
+  rw [Real.dist_eq] at hsteady
+  rcases Nat.even_or_odd N.toNat with ⟨k, hk⟩ | ⟨k, hk⟩
+  · rw [@Int.toNat_add N 1 hN (by linarith), hk ] at hsteady
+    simp at hsteady
+    norm_num at hsteady
+  · rw [@Int.toNat_add N 1 hN (by linarith), hk ] at hsteady
+    simp at hsteady
+    norm_num at hsteady
+
 
 /-- Example 6.1.13 -/
-example : ¬ ((fun n ↦ (-1:ℝ)^n):Sequence).IsCauchy := by sorry
+lemma example6113part2 : ¬ ((fun n ↦ (-1:ℝ)^n):Sequence).IsCauchy := by
+  rw [Sequence.isCauchy_def]
+  intro hsteady
+  exact example6113part1 (hsteady 0.1 (by linarith))
 
 /-- Example 6.1.13 -/
-example : ¬ ((fun n ↦ (-1:ℝ)^n):Sequence).Convergent := by sorry
+example : ¬ ((fun n ↦ (-1:ℝ)^n):Sequence).Convergent := by
+  intro hconverge
+  have hcauchy := Sequence.IsCauchy.convergent hconverge
+  exact example6113part2 hcauchy
 
 /-- Proposition 6.1.15 / Exercise 6.1.6 (Formal limits are genuine limits)-/
 theorem Sequence.lim_eq_LIM {a:ℕ → ℚ} (h: (a:Chapter5.Sequence).IsCauchy) :
-    ((a:Chapter5.Sequence):Sequence).TendsTo (Chapter5.Real.equivR (Chapter5.LIM a)) := by sorry
+    ((a:Chapter5.Sequence):Sequence).TendsTo (Chapter5.Real.equivR (Chapter5.LIM a)) := by
+
+  sorry
+
+/-  simp_rw [Chapter5.Sequence.IsCauchy.coe, Section_4_3.dist_eq] at h
+  rw [Sequence.tendsTo_def]
+  by_contra! hdoesnottend
+  obtain ⟨ε₀, hε₀pos, hnotclose⟩ := hdoesnottend
+  obtain ⟨ε₁, hε₁pos, hεlt⟩ := exists_rat_btwn hε₀pos
+  have hcauchyclose := h (ε₁ / 2) (half_pos (by exact_mod_cast hε₁pos))
+  obtain ⟨N₁, hNcauchy⟩ := hcauchyclose
+  specialize hnotclose N₁
+  simp at hnotclose
+  obtain ⟨N₂, hN₂, hnotclose⟩ := hnotclose
+  have : 0 ≤ N₂ := by grind
+  lift N₂ to ℕ using (by omega)
+  simp at hnotclose
+  rw [if_pos (by omega)] at hnotclose
+  rw [Real.dist_eq] at hnotclose
+  --set L :=  (Chapter5.LIM a).toCut.toR
+  specialize hNcauchy N₁ (by linarith)
+  replace hnotclose : ε₁ < |a N₂ -  (Chapter5.LIM a).toCut.toR| := by linarith
+  --have hnotclosereal : (ε₁:Chapter5.Real) < |((a N₂):Chapter5.Real) -  Chapter5.LIM a| := by exact_mod_cast hnotreal
+  rcases lt_abs.mp hnotclose with (case1 | case2)
+  · -- have : ∃ N : ℕ,
+    --have : L + ((ε₁:ℝ) - ((ε₁:ℝ) / 2)) < ((a N₂):ℝ) - ((ε₁:ℝ) / 2) := by linarith
+    --conv at this =>
+      --lhs
+      --ring_nf
+      -- ⊢ ∀ {x : Chapter5.Real} {a : ℕ → ℚ}, (↑a).IsCauchy → (∃ N, ∀ n ≥ N, x ≤ ↑(a n)) → x ≤ Chapter5.LIM a
+    sorry
+  · sorry
+#check Chapter5.Real.LIM_of_ge' -/
+
 
 /-- Definition 6.1.16 -/
 abbrev Sequence.BoundedBy (a:Sequence) (M:ℝ) : Prop :=
@@ -369,17 +524,59 @@ lemma Sequence.isBounded_def (a:Sequence) :
   a.IsBounded ↔ ∃ M ≥ 0, a.BoundedBy M := by rfl
 
 theorem Sequence.bounded_of_cauchy {a:Sequence} (h: a.IsCauchy) : a.IsBounded := by
-  sorry
+  rw [Sequence.IsCauchy] at h
+  obtain ⟨N, hN⟩ := h 1 (by positivity)
+  simp at hN; obtain ⟨hNm, hsteady⟩ := hN
+  rw [Real.Steady] at hsteady
+  set tailbound := |a.seq N| + 1
+  set headelems := Finset.Icc a.m N
+  set headbound := (Finset.Icc a.m N).sup' (by exact Finset.nonempty_Icc.mpr hNm) (λ n => |a.seq n|)
+  use max headbound tailbound
+  have hmax : 0 ≤ max headbound tailbound := by
+    apply le_max_iff.mpr
+    right
+    unfold tailbound
+    positivity
+  constructor
+  · exact hmax
+  · intro n
+    by_cases vanished : n < a.m
+    · have fact := a.vanish n vanished
+      rw [fact, abs_zero]
+      exact hmax
+    · push_neg at vanished
+      by_cases headtail : n ≤ N
+      · have fact : n ∈ Finset.Icc a.m N := by exact Finset.mem_Icc.mpr ⟨vanished, headtail⟩
+        simp; left
+        unfold headbound
+        exact Finset.le_sup' (λ n => |a.seq n|) fact
+      · push_neg at headtail
+        simp; right
+        unfold tailbound
+        specialize hsteady N (by grind) n (by grind)
+        rw [Real.close_def, Real.dist_eq] at hsteady
+        rw [@Sequence.from_eval a N N (by linarith)] at hsteady
+        rw [@Sequence.from_eval a N n (by linarith)] at hsteady
+        grind
 
 /-- Corollary 6.1.17 -/
 theorem Sequence.bounded_of_convergent {a:Sequence} (h: a.Convergent) : a.IsBounded := by
-  sorry
+  exact Sequence.bounded_of_cauchy (Sequence.IsCauchy.convergent h)
 
 /-- Example 6.1.18 -/
-example : ¬ ((fun (n:ℕ) ↦ (n+1:ℝ)):Sequence).IsBounded := by sorry
+lemma example6118 : ¬ ((fun (n:ℕ) ↦ (n+1:ℝ)):Sequence).IsBounded := by
+  intro hbdd
+  obtain ⟨Bd, hBdpos, hBd⟩ := hbdd
+  obtain ⟨N, hN⟩ := exists_nat_gt Bd
+  specialize hBd N
+  simp at hBd
+  grind
 
 /-- Example 6.1.18 -/
-example : ¬ ((fun (n:ℕ) ↦ (n+1:ℝ)):Sequence).Convergent := by sorry
+example : ¬ ((fun (n:ℕ) ↦ (n+1:ℝ)):Sequence).Convergent := by
+  by_contra! h'
+  have hbdd := Sequence.bounded_of_convergent h'
+  exact example6118 hbdd
 
 instance Sequence.inst_add : Add Sequence where
   add a b := {
@@ -399,11 +596,40 @@ theorem Sequence.add_coe (a b: ℕ → ℝ) : (a:Sequence) + (b:Sequence) = (fun
     in applications. -/
 theorem Sequence.tendsTo_add {a b:Sequence} {L M:ℝ} (ha: a.TendsTo L) (hb: b.TendsTo M) :
   (a+b).TendsTo (L+M) := by
-  sorry
+  intro ε hε
+  specialize ha (ε / 2) (by positivity)
+  specialize hb (ε / 2) (by positivity)
+  obtain ⟨N₁, hNam, haclose⟩ := ha
+  obtain ⟨N₂, hNbm, hbclose⟩ := hb
+  use max (a+b).m (max N₁ N₂)
+  --simp at hNam hNbm haclose hbclose ⊢
+  constructor
+  · grind
+  · rw [Real.closeSeq_def] at haclose hbclose ⊢
+    intro n hn
+    simp at hn ⊢
+    specialize haclose n (by grind)
+    specialize hbclose n (by grind)
+    simp at haclose hbclose
+    rw [if_pos (by grind)] at haclose hbclose ⊢
+    rw [Real.dist_eq] at haclose hbclose ⊢
+    grind
 
 theorem Sequence.lim_add {a b:Sequence} (ha: a.Convergent) (hb: b.Convergent) :
   (a + b).Convergent ∧ lim (a + b) = lim a + lim b := by
-  sorry
+  have hlima := Sequence.lim_def ha
+  have hlimb := Sequence.lim_def hb
+  have habconv : (a + b).Convergent := by
+    use lim a + lim b
+    exact Sequence.tendsTo_add hlima hlimb
+  constructor
+  · exact habconv
+  · obtain hlimab := Sequence.lim_def habconv
+    obtain hlimab' := Sequence.tendsTo_add hlima hlimb
+    by_contra! hneq
+    have hunique := Sequence.tendsTo_unique (a+b) hneq
+    exact hunique ⟨hlimab, hlimab'⟩
+
 
 instance Sequence.inst_mul : Mul Sequence where
   mul a b := {
@@ -423,11 +649,52 @@ theorem Sequence.mul_coe (a b: ℕ → ℝ) : (a:Sequence) * (b:Sequence) = (fun
     in applications. -/
 theorem Sequence.tendsTo_mul {a b:Sequence} {L M:ℝ} (ha: a.TendsTo L) (hb: b.TendsTo M) :
     (a * b).TendsTo (L * M) := by
-  sorry
+    have haconv : a.Convergent := by exact ⟨L, ha⟩
+    have habdd := Sequence.bounded_of_convergent haconv
+    obtain ⟨A, hApos, hAbd⟩ := habdd
+    intro ε hε
+    specialize ha (ε / (2 * (|M|+1))) (by positivity)
+    specialize hb (ε / (2*(A+1))) (by positivity)
+    obtain ⟨N₁, hNam, haclose⟩ := ha
+    obtain ⟨N₂, hNbm, hbclose⟩ := hb
+    use max (a*b).m (max N₁ N₂)
+    constructor
+    · grind
+    · rw [Real.closeSeq_def] at haclose hbclose ⊢
+      intro n hn
+      simp at hn ⊢
+      specialize haclose n (by grind)
+      specialize hbclose n (by grind)
+      simp at haclose hbclose
+      rw [if_pos (by grind)] at haclose hbclose ⊢
+      rw [Real.dist_eq] at haclose hbclose ⊢
+      specialize hAbd n
+      have habsle : |a.seq n| ≤ A + 1 := by linarith
+      calc _ = |a.seq n * (b.seq n - M) + (M * (a.seq n - L))|     := by ring_nf!
+           _ ≤ |a.seq n * (b.seq n - M)| + |M * (a.seq n - L)|     := by exact abs_add_le _ _
+           _ = |a.seq n| * |(b.seq n - M)| + |M| * |(a.seq n - L)| := by rw [abs_mul _ _, abs_mul _ _]
+           _ ≤ (A+1) * |(b.seq n - M)| + |M| * |(a.seq n - L)|     := by gcongr
+           _ ≤ (A+1) * (ε / (2 * (A + 1))) + |M|     * |(a.seq n - L)| := by gcongr
+           _ ≤ ε / 2 + |M| * |(a.seq n - L)|                           := by gcongr; field_simp; norm_num
+           _ ≤ ε / 2 + (|M| + 1) * |(a.seq n - L)|                     := by grind
+           _ ≤ ε / 2 + (|M| + 1) * (ε / (2 * (|M| + 1)))               := by gcongr
+           _ ≤ ε / 2 + ε / 2                                           := by gcongr; field_simp; norm_num
+           _ = ε                                                       := by norm_num
 
 theorem Sequence.lim_mul {a b:Sequence} (ha: a.Convergent) (hb: b.Convergent) :
     (a * b).Convergent ∧ lim (a * b) = lim a * lim b := by
-  sorry
+  have hlima := Sequence.lim_def ha
+  have hlimb := Sequence.lim_def hb
+  have habconv : (a * b).Convergent := by
+    use lim a * lim b
+    exact Sequence.tendsTo_mul hlima hlimb
+  constructor
+  · exact habconv
+  · obtain hlimab := Sequence.lim_def habconv
+    obtain hlimab' := Sequence.tendsTo_mul hlima hlimb
+    by_contra! hneq
+    have hunique := Sequence.tendsTo_unique (a*b) hneq
+    exact hunique ⟨hlimab, hlimab'⟩
 
 
 instance Sequence.inst_smul : SMul ℝ Sequence where
@@ -448,11 +715,45 @@ theorem Sequence.smul_coe (c:ℝ) (a:ℕ → ℝ) : (c • (a:Sequence)) = (fun 
     in applications. -/
 theorem Sequence.tendsTo_smul (c:ℝ) {a:Sequence} {L:ℝ} (ha: a.TendsTo L) :
     (c • a).TendsTo (c * L) := by
-  sorry
+  by_cases hc0 : c = 0
+  · rw [hc0, zero_mul]
+    intro ε hε
+    use ((0:ℝ) • a).m
+    constructor
+    · grind
+    · rw [Real.closeSeq_def]
+      intro n hn
+      simp
+      linarith
+  · push_neg at hc0
+    intro ε hε
+    obtain ⟨N, hNam, hnclose⟩ := ha (ε / |c|) (by positivity)
+    simp at hNam
+    use max N (c • a).m
+    constructor
+    · grind
+    · rw [Real.closeSeq_def] at hnclose ⊢
+      intro n hn
+      specialize hnclose n (by grind)
+      simp at hn hnclose ⊢
+      rw [if_pos (by grind), Real.dist_eq] at hnclose ⊢
+      rw [← mul_sub, abs_mul]
+      field_simp at hnclose
+      nlinarith
 
 theorem Sequence.lim_smul (c:ℝ) {a:Sequence} (ha: a.Convergent) :
     (c • a).Convergent ∧ lim (c • a) = c * lim a := by
-  sorry
+  have hlima := Sequence.lim_def ha
+  have hconv : (c • a).Convergent := by
+    use c * lim a
+    exact Sequence.tendsTo_smul c hlima
+  constructor
+  · exact hconv
+  · obtain hlim := Sequence.lim_def hconv
+    obtain hlim' := Sequence.tendsTo_smul c hlima
+    by_contra! hneq
+    have hunique := Sequence.tendsTo_unique (c • a) hneq
+    exact hunique ⟨hlim, hlim'⟩
 
 instance Sequence.inst_sub : Sub Sequence where
   sub a b := {
@@ -472,11 +773,40 @@ theorem Sequence.sub_coe (a b: ℕ → ℝ) : (a:Sequence) - (b:Sequence) = (fun
     in applications. -/
 theorem Sequence.tendsTo_sub {a b:Sequence} {L M:ℝ} (ha: a.TendsTo L) (hb: b.TendsTo M) :
     (a - b).TendsTo (L - M) := by
-  sorry
+  intro ε hε
+  specialize ha (ε / 2) (by positivity)
+  specialize hb (ε / 2) (by positivity)
+  obtain ⟨N₁, hNam, haclose⟩ := ha
+  obtain ⟨N₂, hNbm, hbclose⟩ := hb
+  use max (a-b).m (max N₁ N₂)
+  --simp at hNam hNbm haclose hbclose ⊢
+  constructor
+  · grind
+  · rw [Real.closeSeq_def] at haclose hbclose ⊢
+    intro n hn
+    simp at hn ⊢
+    specialize haclose n (by grind)
+    specialize hbclose n (by grind)
+    simp at haclose hbclose
+    rw [if_pos (by grind)] at haclose hbclose ⊢
+    rw [Real.dist_eq] at haclose hbclose ⊢
+    grind
 
 theorem Sequence.LIM_sub {a b:Sequence} (ha: a.Convergent) (hb: b.Convergent) :
     (a - b).Convergent ∧ lim (a - b) = lim a - lim b := by
-  sorry
+  have hlima := Sequence.lim_def ha
+  have hlimb := Sequence.lim_def hb
+  have habconv : (a - b).Convergent := by
+    use lim a - lim b
+    exact Sequence.tendsTo_sub hlima hlimb
+  constructor
+  · exact habconv
+  · obtain hlimab := Sequence.lim_def habconv
+    obtain hlimab' := Sequence.tendsTo_sub hlima hlimb
+    by_contra! hneq
+    have hunique := Sequence.tendsTo_unique (a-b) hneq
+    exact hunique ⟨hlimab, hlimab'⟩
+
 
 noncomputable instance Sequence.inst_inv : Inv Sequence where
   inv a := {
