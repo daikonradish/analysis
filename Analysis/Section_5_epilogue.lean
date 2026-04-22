@@ -588,18 +588,15 @@ theorem Real.exists_equiv_below {a: ℕ → ℚ} (ha: Sequence.IsCauchy a)
 theorem Real.equivR_eq' {a: ℕ → ℚ} (ha: Sequence.IsCauchy a)
   : (LIM a).equivR = Real.mk ha.CauSeq := by
     by_cases hq: ∃(q: ℚ), q = LIM a
-    · -- obtain ⟨q, hqlim⟩ := hq
-      -- lemma Real.equivR_iff (x : Real) (y : ℝ) : y = Real.equivR x ↔ y.toCut = x.toCut := by
-      --rw [Real.equivR_iff]
-      --rw [Real.mk_const]
-      -- -- We can now use it to convert between different functions in Real.mk-
-      -- theorem Real.mk_eq_mk {a b: ℕ → ℚ} (ha : Sequence.IsCauchy a) (hb : Sequence.IsCauchy b) (hab: Sequence.Equiv a b)
-      -- : Real.mk ha.CauSeq = Real.mk hb.CauSeq := Real.mk_eq.mpr (hab.LimZero ha hb)
-      -- have hqlim' := hqlim
-      -- rw [Real.ratCast_def, Real.LIM_eq_LIM (Sequence.IsCauchy.const q) ha] at hqlim
-      -- have hqrealmk := Real.mk_eq_mk (Sequence.IsCauchy.const q) ha hqlim
-      -- rw [← hqrealmk]
-      sorry
+    · obtain ⟨q, hqlim⟩ := hq
+      have hqlim' := hqlim
+      rw [Real.ratCast_def, Real.LIM_eq_LIM (Sequence.IsCauchy.const q) ha] at hqlim
+      have hqrealmk := Real.mk_eq_mk (Sequence.IsCauchy.const q) ha hqlim
+      rw [← hqrealmk]
+      rw [Sequence.IsCauchy.CauSeq]
+      suffices h : equivR (LIM a) = q by exact_mod_cast h
+      rw [← hqlim']
+      apply Real.equivR_ratCast
     show sSup (Rat.cast '' (LIM a).toSet_Rat) = _
     refine IsLUB.csSup_eq ⟨?_, ?_⟩ (Set.Nonempty.image _ <| Real.toSet_Rat_nonempty _)
     · -- show that `Real.mk ha.CauSeq` is an upper bound
