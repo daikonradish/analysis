@@ -581,10 +581,28 @@ theorem Real.exists_equiv_below {a: ℕ → ℚ} (ha: Sequence.IsCauchy a)
 -- useful theorems for the following proof
 #check Real.mk_le
 #check Real.mk_le_of_forall_le
+#check Real.mk_le
 #check Real.mk_const
 
 -- Transform a `Real` to an `ℝ` by going through Cauchy Sequences
 -- we can use the conversion of Real.mk_eq to use different sequences to show different parts
+lemma rat_lt_lim_of_forall {q : ℚ} {a : ℕ → ℚ} (ha : Sequence.IsCauchy a)
+    (h : (q : Real) < LIM a) : ∃ N, ∀ n ≥ N, q ≤ a n := by
+  rw [Real.ratCast_def, Real.lt_iff] at h
+  unfold Real.IsNeg at h
+  obtain ⟨b, hbneg, hbcauch, hblim⟩ := h
+  rw [Real.LIM_sub (Sequence.IsCauchy.const _) ha] at hblim
+  rw [Real.LIM_eq_LIM (Sequence.IsCauchy.sub (Sequence.IsCauchy.const _) ha) hbcauch] at hblim
+  rw [Sequence.equiv_iff] at hblim
+  unfold BoundedAwayNeg at hbneg
+  obtain ⟨c, hcpos, hcneg⟩ := hbneg
+  obtain ⟨N, hN⟩ := hblim c hcpos
+  use N; intro n hn
+  specialize hN n hn
+  specialize hcneg n
+  simp at hN
+  grind
+
 theorem Real.equivR_eq' {a: ℕ → ℚ} (ha: Sequence.IsCauchy a)
   : (LIM a).equivR = Real.mk ha.CauSeq := by
     by_cases hq: ∃(q: ℚ), q = LIM a
@@ -603,23 +621,148 @@ theorem Real.equivR_eq' {a: ℕ → ℚ} (ha: Sequence.IsCauchy a)
       intro _ hy
       obtain ⟨y, hy, h⟩ := Set.mem_image _ _ _ |>.mp hy
       rw [← h, show (y: ℝ) = Real.mk (CauSeq.const _ y) from rfl]
-      sorry
+      unfold Real.toSet_Rat at hy; simp at hy
+      rw [Real.mk_le]
+      apply CauSeq.le_of_exists
+      obtain ⟨N, hN⟩ := rat_lt_lim_of_forall ha hy
+      use N
+      intro j hj
+      simp [CauSeq.const_apply]
+      exact_mod_cast hN j hj
     -- show that for any other upper bound, `Real.mk ha.CauSeq` is smaller
+    -- Intro the second part of IsLUB: it is the least upper bound
     intro M hM
-    sorry
-#check CauSeq.const
-#check Real.mk
+    by_contra hlt
+    push_neg at hlt -- Real.mk ha.CauSeq > M
+    obtain ⟨q, hMq, hqa⟩ := exists_rat_btwn hlt
+
+    -- Manually bridge to Tao's LT
+    -- need to show (q : Real) < Real.mk ha.CauSeq → q < LIM a
+    -- This is the "hard" part of the isomorphism.
+    have hq_lt_tao : (q : ℚ) < (LIM a) := by
+      rw [← Real.mk_const] at hqa
+      obtain ⟨ε, hε_pos, N, hN⟩ := Real.mk_lt.mp hqa
+      rw [Real.ratCast_def, Real.lt_iff]
+      unfold Real.IsNeg
+      use (fun n => q - a (n + N))
+      refine ⟨?_, ?_, ?_⟩
+      · use ε
+        constructor
+        · exact hε_pos
+        · intro n
+          specialize hN (n+N) (by grind)
+          simp at hN ⊢
+          grind
+      · apply Sequence.IsCauchy.sub
+        · apply Sequence.IsCauchy.const
+        · apply Sequence.IsCauchy.tail a N ha
+      · have this : (fun n => q - a (n + N)) = (fun n => q) - (fun n => a (n+N)) := by
+          ext n
+          rfl
+        rw [this, ← Real.LIM_sub (Sequence.IsCauchy.const q) (Sequence.IsCauchy.tail a N ha)]
+        congr 1
+        · exact Real.LIM_of_tail N ha
+    -- Now q is in the set of rational lower bounds
+    have hq_mem : (q : ℝ) ∈ (Rat.cast '' (LIM a).toSet_Rat) := by
+      simp [Real.toSet_Rat]
+      exact hq_lt_tao
+    have hq_le_M := hM hq_mem
+    -- 5. Contradiction in Mathlib's Real: q ≤ M and M < q
+    linarith [hMq, hq_le_M]
+
 lemma Real.equivR_eq (x: Real) : ∃(a : ℕ → ℚ) (ha: Sequence.IsCauchy a),
   x = LIM a ∧ x.equivR = Real.mk ha.CauSeq := by
     obtain ⟨a, ha, rfl⟩ := x.eq_lim
     exact ⟨a, ha, rfl, equivR_eq' ha⟩
 
+lemma Real.equivR_add (x y : Real) : equivR (x + y) = equivR x + equivR y := by
+  obtain ⟨x', hx', hxlim, hxeq⟩ := Real.equivR_eq x
+  obtain ⟨y', hy', hylim, hyeq⟩ := Real.equivR_eq y
+  rw [hxlim, hylim]
+  rw [hxlim] at hxeq
+  rw [hylim] at hyeq
+  rw [hxeq, hyeq]
+  rw [Real.LIM_add hx' hy']
+  rw [Real.equivR_eq' (Sequence.IsCauchy.add hx' hy')]
+  rw [← Real.mk_add]
+  congr 1
+
+lemma Real.equivR_mul (x y : Real) : equivR (x * y) = equivR x * equivR y := by
+  obtain ⟨x', hx', hxlim, hxeq⟩ := Real.equivR_eq x
+  obtain ⟨y', hy', hylim, hyeq⟩ := Real.equivR_eq y
+  rw [hxlim, hylim]
+  rw [hxlim] at hxeq
+  rw [hylim] at hyeq
+  rw [hxeq, hyeq]
+  rw [Real.LIM_mul hx' hy']
+  rw [Real.equivR_eq' (Sequence.IsCauchy.mul hx' hy')]
+  rw [← Real.mk_mul]
+  congr 1
+
+lemma Real.equivR_le_iff {x y : Real} : equivR x ≤ equivR y ↔ x ≤ y  := by
+  obtain ⟨x', hx', hxlim, hxeq⟩ := Real.equivR_eq x
+  obtain ⟨y', hy', hylim, hyeq⟩ := Real.equivR_eq y
+  rw [hxeq, hyeq]
+  rw [hxlim, hylim]
+  constructor
+  · intro hcs
+    have hcs' := Real.mk_le.mp hcs
+    rcases hcs' with hlt | heq
+    · left
+      suffices LIM x' - LIM y' < 0  by linarith
+      rw [Real.LIM_sub hx' hy']
+      change (LIM (x' - y') - 0).IsNeg
+      rw [sub_zero, isNeg_def]
+      obtain ⟨B, hBpos, hB⟩ := hlt
+      obtain ⟨N, hN⟩ := hB
+      use (fun n => (x' - y') (n+N))
+      refine ⟨?_, ?_, ?_⟩
+      · use B
+        constructor
+        · exact hBpos
+        · intro n
+          specialize hN (n+N) (by linarith)
+          simp at hN ⊢
+          linarith
+      · exact Sequence.IsCauchy.tail _ N (Sequence.IsCauchy.sub hx' hy')
+      · rw [← Real.LIM_of_tail N (Sequence.IsCauchy.sub hx' hy')]
+    · right
+      change (hx'.CauSeq - hy'.CauSeq).LimZero at heq
+      have heq' := (Sequence.Equiv_iff_LimZero hx' hy').mpr heq
+      rwa [Real.LIM_eq_LIM hx' hy']
+  · intro hlim
+    apply Real.mk_le.mpr
+    rcases hlim with hlt | heq
+    · left
+      replace hlt : LIM x' - LIM y' < 0 := by linarith
+      rw [Real.LIM_sub hx' hy'] at hlt
+      change (LIM (x' - y') - 0).IsNeg at hlt
+      rw [sub_zero, isNeg_def] at hlt
+      obtain ⟨α, hαbaneg, hcauchy, hlimeq⟩ := hlt
+      obtain ⟨B, hBpos, hB⟩ := hαbaneg
+      rw [Real.LIM_eq_LIM (Sequence.IsCauchy.sub hx' hy') hcauchy, Sequence.equiv_iff] at hlimeq
+      use B/2
+      constructor
+      · positivity
+      · specialize hlimeq (B/2) (by positivity)
+        obtain ⟨N, hN⟩ := hlimeq
+        use N
+        intro j hj
+        specialize hB j
+        specialize hN j hj
+        simp at hB hN ⊢
+        grind
+    · right
+      rw [Real.LIM_eq_LIM hx' hy'] at heq
+      have heq' := (Sequence.Equiv_iff_LimZero hx' hy').mp heq
+      apply heq'
+
 /-- The isomorphism preserves order and ring operations. -/
 noncomputable abbrev Real.equivR_ordered_ring : Real ≃+*o ℝ where
   toEquiv := equivR
-  map_add' := by sorry
-  map_mul' := by sorry
-  map_le_map_iff' := by sorry
+  map_add' := Real.equivR_add
+  map_mul' := Real.equivR_mul
+  map_le_map_iff' := Real.equivR_le_iff
 
 -- helpers for converting properties between Real and ℝ
 lemma Real.equivR_map_mul {x y : Real} : equivR (x * y) = equivR x * equivR y :=
