@@ -584,25 +584,169 @@ theorem finite_series_comm {XX YY:Type*} (X: Finset XX) (Y: Finset YY) (f: XX ×
 
 -- Exercise 7.1.3 : develop as many analogues as you can of the above theory for finite products
 -- instead of finite sums.
+theorem prod_of_empty {n m:ℤ} (h: n < m) (a: ℤ → ℝ) : ∏ i ∈ Icc m n, a i = 1 := by
+  rw [prod_eq_one]; intro _; rw [mem_Icc]; grind
+
+theorem prod_of_nonempty {n m:ℤ} (h: n ≥ m-1) (a: ℤ → ℝ) :
+    ∏ i ∈ Icc m (n+1), a i = (∏ i ∈ Icc m n, a i) * a (n+1) := by
+  rw [mul_comm _ (a (n+1))]
+  convert prod_insert _
+  · ext; simp; omega
+  · infer_instance
+  simp
+
+/-- Lemma 7.1.4(a) / Exercise 7.1.1 -/
+theorem concat_finite_series_prod {m n p:ℤ} (hmn: m ≤ n+1) (hpn : n ≤ p) (a: ℤ → ℝ) :
+  (∏ i ∈ Icc m n, a i) * (∏ i ∈ Icc (n+1) p, a i) = ∏ i ∈ Icc m p, a i := by
+  induction' p, hpn using Int.le_induction with p' hp' ih
+  · rw [prod_of_empty (n:=n) (m:=(n+1)) (by linarith), mul_one]
+  · rw [prod_of_nonempty (n:=p') (by linarith), ← mul_assoc, ih, ← prod_of_nonempty (by linarith)]
+
+private lemma prod_of_one_item  (a: ℤ → ℝ) (m:ℤ) : ∏ i ∈ Icc m m, a i = a m := by
+  have hid := prod_of_nonempty (m:=m) (n:=(m-1)) (by linarith) a
+  ring_nf at hid
+  rwa [prod_of_empty (n:=(-1+m)) (m:=m) (by linarith), one_mul] at hid
+
+
+theorem shift_finite_series_prod {m n k:ℤ} (a: ℤ → ℝ) :
+  ∏ i ∈ Icc m n, a i = ∏ i ∈ Icc (m+k) (n+k), a (i-k) := by
+  by_cases! hmn : m ≤ n
+  · induction' n, hmn using Int.le_induction with p' hp' ih
+    · rw [prod_of_one_item, prod_of_one_item]; simp
+    · rw [prod_of_nonempty (m:=m) (by linarith), ih]
+      have : a (p' + 1) = a (p' + k + 1 - k) := by ring_nf
+      rw [this, ← prod_of_nonempty (m:=m+k) (n:=p'+k) (a:=fun n => a (n-k)) (by linarith)]
+      ring_nf
+  · rw [prod_of_empty (m:=m) (by linarith), prod_of_empty (m:=(m+k)) (by linarith)]
+
+/-- Lemma 7.1.4(c) / Exercise 7.1.1 -/
+theorem finite_series_prod_mul {m n:ℤ} (a b: ℤ → ℝ) :
+  ∏ i ∈ Icc m n, (a i * b i) = (∏ i ∈ Icc m n, a i) * (∏ i ∈ Icc m n, b i) := by
+  by_cases! hmn : m ≤ n
+  · induction' n, hmn using Int.le_induction with p' hp' ih
+    · rw [prod_of_one_item, prod_of_one_item, prod_of_one_item]
+    · rw [prod_of_nonempty (m:=m) (by linarith), ih]
+      rw [prod_of_nonempty (m:=m) (by linarith), prod_of_nonempty (m:=m) (by linarith)]
+      ring_nf
+  · rw [prod_of_empty (m:=m) (by linarith), prod_of_empty (m:=m) (by linarith), prod_of_empty (m:=m) (by linarith)]
+    simp
+
+/-- Lemma 7.1.4(d) / Exercise 7.1.1 -/
+theorem finite_series_prod_pow {m n:ℤ} (a: ℤ → ℝ) (c:ℝ) :
+  ∑ i ∈ Icc m n, c * a i = c * ∑ i ∈ Icc m n, a i := by
+  by_cases! hmn : m ≤ n
+  · induction' n, hmn using Int.le_induction with p' hp' ih
+    · rw [sum_of_one_item, sum_of_one_item]
+    · rw [sum_of_nonempty (m:=m) (by linarith), ih, ← mul_add c _ _, ← sum_of_nonempty (m:=m) (by linarith)]
+  · rw [sum_of_empty (m:=m) (by linarith), sum_of_empty (m:=m) (by linarith)]
+    simp
+
+
 
 #check Nat.factorial_zero
 #check Nat.factorial_succ
+
+#check Finset.range_eq_Ico
 
 /--
   Exercise 7.1.4. Note: there may be some technicalities passing back and forth between natural
   numbers and integers. Look into the tactics {tactic}`zify`, {tactic}`norm_cast`, and {tactic}`omega`
 -/
+lemma binomial_nat (x y : ℝ) (n:ℕ) :
+  (x + y)^n = ∑ j ∈ range (n+1), (n.choose j) * x^j * y^(n-j) := by
+  let f : ℕ → ℕ → ℝ := (fun n m => (n.choose m) * x^m * y^(n-m))
+  change (x + y) ^ n = ∑ m ∈ range (n + 1), f n m
+  induction' n with n ih
+  · unfold f
+    simp
+  · have hy : ∀ (n:ℕ), f n 0 = y^n := by unfold f; simp
+    have h' : ∀ (n:ℕ), f n (n+1) = 0 := by unfold f; simp
+    have h  : ∀ (n : ℕ), ∀ k ∈ range (n + 1), f (n + 1) (k + 1) = x * f n k + y * f n (k + 1) := by
+      intro n k hk
+      have hkn : k ≤ n := by grind
+      unfold f
+      -- massage; i think i am going blind
+      conv_lhs => rw [Nat.choose_succ_succ, Nat.cast_add, add_mul, add_mul]; ring_nf
+      conv_rhs => ring_nf
+      congr 1
+      · have : (1 + n - (1 + k)) = n - k := by grind
+        rw [this]
+        ring_nf
+      · have : y = y ^ 1 := by grind
+        nth_rewrite 2 [this]
+        conv_rhs => rw [show x * x ^ k * y ^ 1 * y ^ (n - (1 + k)) = x * x ^ k * (y ^ 1 * y ^ (n - (1 + k))) by ring_nf]
+        rw [← pow_add]
+        simp
+        by_cases! hik : n = k
+        · rw [hik]
+          simp; right
+          have := Nat.choose_succ_self k
+          rw [Nat.succ_eq_add_one] at this
+          ring_nf at this
+          exact this
+        · grind
+    -- handle lhs
+    rw [pow_succ, ih, Finset.sum_mul]
+    simp_rw [mul_add]
+    -- handle rhs
+    rw [Finset.sum_add_distrib, Finset.sum_range_succ' (f (n + 1)), hy]
+    have hrw : ∑ k ∈ range (n + 1), f (n + 1) (k + 1) =
+           ∑ k ∈ range (n + 1), (x * f n k + y * f n (k + 1)) := by
+      apply Finset.sum_congr rfl
+      intro k hk
+      exact h n k hk
+    rw [hrw]
+    simp_rw [Finset.sum_add_distrib, mul_comm _ x]
+    suffices h : ∑ x ∈ range (n + 1), f n x * y = ∑ x ∈ range (n + 1), y * f n (x + 1) + y ^ (n + 1) by linarith
+    simp_rw [mul_comm (f n _) y]
+    rw [Finset.sum_range_succ']
+    rw [hy, pow_add, pow_one, mul_comm (y ^ n) y]
+    rw [Finset.sum_range_succ, h', mul_zero, add_zero]
+
+
+#check sum_congr
 theorem binomial_theorem (x y:ℝ) (n:ℕ) :
     (x + y)^n
     = ∑ j ∈ Icc (0:ℤ) n,
     n.factorial / (j.toNat.factorial * (n-j).toNat.factorial) * x^j * y^(n - j) := by
-  sorry
+  rw [binomial_nat]
+  have heq : Icc (0:ℤ) n = (range (n+1)).map Nat.castEmbedding := by
+    ext k; simp
+    constructor
+    · rintro ⟨h1, h2⟩; use k.toNat; grind
+    · intro ha; obtain ⟨a, ha'⟩ := ha; grind
+  rw [heq, sum_map]; simp
+  apply Finset.sum_congr
+  · rfl
+  · intro x hx
+    rw [Nat.choose_eq_factorial_div_factorial (by grind)]
+    congr 1
+    · congr 1
+      · rw [Nat.cast_div (Nat.factorial_mul_factorial_dvd_factorial (by grind)) (by positivity), Nat.cast_mul]
+    · rw [← Nat.cast_sub (by grind)]
+      simp [zpow_natCast]
 
 /-- Exercise 7.1.5 -/
 theorem lim_of_finite_series {X:Type*} [Fintype X] (a: X → ℕ → ℝ) (L : X → ℝ)
   (h: ∀ x, Filter.atTop.Tendsto (a x) (nhds (L x))) :
     Filter.atTop.Tendsto (fun n ↦ ∑ x, a x n) (nhds (∑ x, L x)) := by
-  sorry
+  suffices foreverysubset :
+    ∀ χ : Finset X, Filter.atTop.Tendsto (fun n ↦ ∑ x ∈ χ, a x n) (nhds (∑ x ∈ χ, L x)) by exact foreverysubset univ
+  intro χ
+  induction' χ using Finset.induction with x S hx ih
+  · simp
+  · specialize h x
+    rw [Metric.tendsto_atTop] at h ih ⊢
+    simp_rw [Real.dist_eq] at h ih ⊢
+    intro ε hε
+    obtain ⟨N₁, hN₁⟩ := h  (ε/2) (by positivity)
+    obtain ⟨N₂, hN₂⟩ := ih (ε/2) (by positivity)
+    use max N₁ N₂; intro n hn
+    specialize hN₁ n (by grind)
+    specialize hN₂ n (by grind)
+    rw [Finset.sum_insert hx, Finset.sum_insert hx]
+    grind
+
 
 /-- Exercise 7.1.6 -/
 theorem sum_union_disjoint {n : ℕ} {S : Type*} [Fintype S]
@@ -611,12 +755,27 @@ theorem sum_union_disjoint {n : ℕ} {S : Type*} [Fintype S]
     (cover : ∀ s : S, ∃ i, s ∈ E i)
     (f : S → ℝ) :
     ∑ s, f s = ∑ i, ∑ s ∈ E i, f s := by
-  sorry
+  suffices h : ∑ s ∈ Finset.biUnion Finset.univ E, f s = ∑ i, ∑ s ∈ E i, f s by
+    have : Finset.biUnion Finset.univ E = Finset.univ := by
+      ext s; simp
+      exact cover s
+    rwa [this] at h
+  revert E disj cover
+  induction' n with k ih
+  · simp
+  · intro E disj cover
+    rw [Fin.univ_succ, Finset.sum_biUnion]
+    intro i hi j hj hij
+    exact disj i j hij
 
 /-- {given}`aᵢ` Exercise 7.1.7. Uses {lean}`Fin m` (so {lean}`aᵢ < m`) instead of the book's {lean}`aᵢ ≤ m`;
   the bound is baked into the type, and {kw (of := «term_<_»)}`<` replaces {kw (of := «term_≤_»)}`≤` to match the 0-indexed shift. -/
 theorem sum_finite_col_row_counts {n m : ℕ} (a : Fin n → Fin m) :
     ∑ i, (a i : ℕ) = ∑ j : Fin m, {i : Fin n | j < a i}.toFinset.card := by
-  sorry
+  simp_rw [← Fin.card_Iio]
+  simp_rw [Finset.card_eq_sum_ones]
+  rw [Finset.sum_comm' (s' := fun j => {i | j < a i}.toFinset) (t' := Finset.univ)]
+  simp
+
 
 end Finset

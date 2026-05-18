@@ -635,7 +635,6 @@ theorem Real.equivR_eq' {a: ℕ → ℚ} (ha: Sequence.IsCauchy a)
     by_contra hlt
     push_neg at hlt -- Real.mk ha.CauSeq > M
     obtain ⟨q, hMq, hqa⟩ := exists_rat_btwn hlt
-
     -- Manually bridge to Tao's LT
     -- need to show (q : Real) < Real.mk ha.CauSeq → q < LIM a
     -- This is the "hard" part of the isomorphism.
@@ -771,17 +770,36 @@ lemma Real.equivR_map_mul {x y : Real} : equivR (x * y) = equivR x * equivR y :=
 lemma Real.equivR_map_inv {x: Real} : equivR (x⁻¹) = (equivR x)⁻¹ :=
   map_inv₀ equivR_ordered_ring _
 
-theorem Real.equivR_map_pos {x: Real} : 0 < x ↔ 0 < equivR x := by sorry
+lemma Real.equivR_map_zero : equivR 0 = 0 := by
+  exact map_zero equivR_ordered_ring
 
-theorem Real.equivR_map_nonneg {x: Real} : 0 ≤ x ↔ 0 ≤ equivR x := by sorry
+theorem Real.equivR_map_pos {x: Real} : 0 < x ↔ 0 < equivR x := by
+  conv_rhs => rw [← Real.equivR_map_zero]
+  exact (map_lt_map_iff equivR_ordered_ring).symm
 
+theorem Real.equivR_map_nonneg {x: Real} : 0 ≤ x ↔ 0 ≤ equivR x := by
+  conv_rhs => rw [← Real.equivR_map_zero]
+  exact (map_le_map_iff equivR_ordered_ring).symm
 
 -- Showing equivalence of the different pows
 theorem Real.pow_of_equivR (x:Real) (n:ℕ) : equivR (x^n) = (equivR x)^n := by
-  sorry
+  induction' n with k ih
+  · symm; rw [Real.equivR_iff]
+    simp; ext q
+    simp; norm_cast
+  · rw [pow_succ, _root_.pow_succ, Real.equivR_map_mul, ih]
 
 theorem Real.zpow_of_equivR (x:Real) (n:ℤ) : equivR (x^n) = (equivR x)^n := by
-  sorry
+  by_cases! hn : n ≥ 0
+  · lift n to ℕ using (by omega)
+    apply Real.pow_of_equivR
+  · set m := Int.natAbs n with hmdef
+    have hmn : n = -(m:ℤ) := by omega
+    rw [hmn, zpow_neg, _root_.zpow_neg, ← inv_eq_one_div]
+    change equivR_ordered_ring (x ^ m)⁻¹ = (equivR_ordered_ring x ^ ↑m)⁻¹
+    rw [map_inv₀ equivR_ordered_ring]
+    congr 1
+    apply Real.pow_of_equivR
 
 theorem Real.ratPow_of_equivR (x:Real) (q:ℚ) (hx : x > 0): equivR (x^q) = (equivR x)^(q:ℝ) := by
   sorry

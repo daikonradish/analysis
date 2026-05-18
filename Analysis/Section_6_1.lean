@@ -474,9 +474,18 @@ example : ¬ ((fun n ↦ (-1:ℝ)^n):Sequence).Convergent := by
 /-- Proposition 6.1.15 / Exercise 6.1.6 (Formal limits are genuine limits)-/
 theorem Sequence.lim_eq_LIM {a:ℕ → ℚ} (h: (a:Chapter5.Sequence).IsCauchy) :
     ((a:Chapter5.Sequence):Sequence).TendsTo (Chapter5.Real.equivR (Chapter5.LIM a)) := by
+  rw [Sequence.tendsTo_iff]
+  intro ε hε
+  obtain ⟨ε', hεpos', hε'⟩ := exists_rat_btwn hε; norm_cast at hεpos'
+  have h' := h
+  simp_rw [Chapter5.Sequence.IsCauchy.coe, Section_4_3.dist_eq] at h'
+  have hlim := Chapter5.Real.equivR_eq' h
+  rw [hlim]
+  set L := Real.mk h.CauSeq with hLdef
+  -- have := CauSeq.tendsto_limit h.CauSeq
 
   sorry
-
+#check CauSeq.tendsto_limit
 /-  simp_rw [Chapter5.Sequence.IsCauchy.coe, Section_4_3.dist_eq] at h
   rw [Sequence.tendsTo_def]
   by_contra! hdoesnottend
