@@ -432,7 +432,7 @@ theorem Sequence.ge_inf {a:Sequence} {n:ℤ} (hn: n ≥ a.m) : a n ≥ a.inf := 
 
 /-- Remark 6.3.7 -/
 theorem Sequence.inf_ge_lower {a:Sequence} {M:EReal} (h: ∀ n ≥ a.m, a n ≥ M) : a.inf ≥ M := by
-  apply EReal.inf_ge_upper
+  apply EReal.inf_ge_lower
   intro x hx
   obtain ⟨N, hNam, hnseq⟩ := hx
   specialize h N hNam
@@ -455,7 +455,7 @@ theorem Sequence.exists_between_gt_inf {a:Sequence} {y:EReal} (h: y > a.inf ) :
       rw [heq]
       exact hall
     rw [Sequence.inf] at h
-    have hineq := EReal.inf_ge_upper _ hylower
+    have hineq := EReal.inf_ge_lower _ hylower
     rcases (EReal.le_iff _ _).mp hineq with (hreal | htop | hbot)
     · obtain ⟨x', y', hx', hy', hxy⟩ := hreal
       rw [hx', hy'] at h
