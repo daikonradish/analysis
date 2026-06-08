@@ -748,7 +748,7 @@ theorem atMostCountable_iff_injective (A: Type) : AtMostCountable A ↔ ∃ f : 
     apply Nat.atMostCountable_subset
 
 /-- Exercise 8.1.9 -/
-example {I X:Type} (hI: AtMostCountable I) (A: I → Set X) (hA: ∀ i, AtMostCountable (A i)) :
+theorem atMostCountable_of_iUnion_atMostCountable {I X:Type} (hI: AtMostCountable I) (A: I → Set X) (hA: ∀ i, AtMostCountable (A i)) :
   AtMostCountable (⋃ i, A i) := by
   -- choosing the i-th set.
   choose ι hι using (atMostCountable_iff_injective _).mp hI
