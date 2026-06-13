@@ -158,8 +158,13 @@ theorem Uncountable.real : Uncountable ℝ := by
 
 /-- Exercise 8.3.1 -/
 example {X:Type} [Finite X] : Nat.card (Set X) = 2 ^ Nat.card X := by
-  sorry
+  haveI : Fintype X := Fintype.ofFinite X
+  rw [Nat.card_eq_fintype_card, Nat.card_eq_fintype_card]
+  apply Fintype.induction_empty_option (fun Y => Fintype.card (Set Y) = 2 ^ Fintype.card Y)
 
+  | empty => sorry 
+  | option => sorry
+  
 open Classical in
 /-- Exercise 8.3.2.  Some subtle type changes due to how sets are implemented in Mathlib. Also we shift the sequence {lit}`D` by one so that we can work in {lean}`Set A` rather than {lean}`Set B`. -/
 theorem Schroder_Bernstein_lemma {X: Type} {A B C: Set X} (hAB: A ⊆ B) (hBC: B ⊆ C) (f: C ↪ A) :

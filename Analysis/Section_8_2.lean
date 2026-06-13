@@ -1044,7 +1044,7 @@ theorem infinite_of_conditionally_convergent {a: ℕ → ℝ}
           simp; unfold α β; exact (max_zero_add_max_neg_zero_eq_abs_self _).symm
         · simp
     exact absurd habsconv ha'
-
+#check EReal.tendsto_coe_atTop
 /-- Theorem 8.2.8 (Riemann rearrangement theorem) / Exercise 8.2.5 -/
 theorem permute_convergesTo_of_divergent {a: ℕ → ℝ} (ha: (a:Series).converges)
   (ha': ¬ (a:Series).absConverges) (L:ℝ) :
@@ -1595,15 +1595,770 @@ theorem permute_convergesTo_of_divergent {a: ℕ → ℝ} (ha: (a:Series).conver
   refine ⟨ ⟨ hn'_inj, hn'_surj ⟩, ?_ ⟩; convert hsum
 
 /-- Exercise 8.2.6 -/
+structure GreedyState where
+  i : ℕ -- next positive term index
+  j : ℕ -- next negative term index
+  k : ℕ -- current threshold
+  s : ℝ -- current partial sum
+
+noncomputable def initialState : GreedyState := ⟨0, 0, 0, 0⟩
+
+noncomputable def greedyStep (a : ℕ → ℝ) (hp : ℕ ≃ {n | a n ≥ 0}) (hq : ℕ ≃ {n | a n < 0})
+    (st : GreedyState) : ℕ × GreedyState :=
+  if st.s ≤ (st.k : ℝ) then
+    Prod.mk (hp st.i).val (GreedyState.mk (st.i + 1) st.j st.k (st.s + a (hp st.i).val))
+  else
+    Prod.mk (hq st.j).val (GreedyState.mk st.i (st.j + 1) (st.k + 1) (st.s + a (hq st.j).val))
+
+noncomputable def stateSeq (a : ℕ → ℝ) (hp : ℕ ≃ {n | a n ≥ 0}) (hq : ℕ ≃ {n | a n < 0}) : ℕ → GreedyState
+  | 0 => initialState
+  | n + 1 => (greedyStep a hp hq (stateSeq a hp hq n)).2
+
+noncomputable def f (a : ℕ → ℝ) (hp : ℕ ≃ {n | a n ≥ 0}) (hq : ℕ ≃ {n | a n < 0}) (n : ℕ) : ℕ :=
+  (greedyStep a hp hq (stateSeq a hp hq n)).1
+
+
+lemma stateSeq_k_eq_j (a : ℕ → ℝ) (hp : ℕ ≃ {n | a n ≥ 0}) (hq : ℕ ≃ {n | a n < 0})
+    (n : ℕ) : (stateSeq a hp hq n).k = (stateSeq a hp hq n).j := by
+  induction n with
+  | zero => simp [stateSeq, initialState]
+  | succ n ih =>
+    simp [stateSeq, greedyStep]
+    split_ifs with h <;> simp [ih]
+
+lemma stateSeq_i_mono (a : ℕ → ℝ)(hp : ℕ ≃ {n | a n ≥ 0}) (hq : ℕ ≃ {n | a n < 0})
+    (n : ℕ) : (stateSeq a hp hq n).i ≤ (stateSeq a hp hq (n + 1)).i := by
+  simp [stateSeq, greedyStep]
+  split_ifs with h <;> simp
+
+lemma stateSeq_j_mono (a : ℕ → ℝ) (hp : ℕ ≃ {n | a n ≥ 0}) (hq : ℕ ≃ {n | a n < 0})
+    (n : ℕ) : (stateSeq a hp hq n).j ≤ (stateSeq a hp hq (n + 1)).j := by
+  simp [stateSeq, greedyStep]
+  split_ifs with h <;> simp
+
+lemma stateSeq_i_mono' (a : ℕ → ℝ) (hp : ℕ ≃ {n | a n ≥ 0}) (hq : ℕ ≃ {n | a n < 0})
+    (m n : ℕ) (h : m ≤ n) : (stateSeq a hp hq m).i ≤ (stateSeq a hp hq n).i := by
+  induction' n, h using Nat.le_induction with k hk ih
+  · simp
+  · have := stateSeq_i_mono a hp hq k
+    linarith
+
+lemma stateSeq_j_mono' (a : ℕ → ℝ) (hp : ℕ ≃ {n | a n ≥ 0}) (hq : ℕ ≃ {n | a n < 0})
+    (m n : ℕ) (h : m ≤ n) : (stateSeq a hp hq m).j ≤ (stateSeq a hp hq n).j := by
+  induction' n, h using Nat.le_induction with k hk ih
+  · simp
+  · have := stateSeq_j_mono a hp hq k
+    linarith
+
+lemma hs_eq (a : ℕ → ℝ) (hp : ℕ ≃ {n | a n ≥ 0}) (hq : ℕ ≃ {n | a n < 0})  : ∀ n, (stateSeq a hp hq n).s =
+    ∑ m ∈ Finset.range (stateSeq a hp hq n).i, a (hp m).val +
+    ∑ m ∈ Finset.range (stateSeq a hp hq n).j, a (hq m).val := by
+  intro n
+  induction n with
+  | zero => simp [stateSeq, initialState]
+  | succ n ih =>
+    show (greedyStep a hp hq (stateSeq a hp hq n)).2.s = _
+    simp only [greedyStep]
+    split_ifs with h
+    · -- positive branch: i increments, j unchanged
+      have hi' : (stateSeq a hp hq (n+1)).i = (stateSeq a hp hq n).i + 1 := by
+        show (greedyStep a hp hq (stateSeq a hp hq n)).2.i = _
+        simp only [greedyStep]
+        rw [if_pos h]
+      have hj' : (stateSeq a hp hq (n+1)).j = (stateSeq a hp hq n).j := by
+        show (greedyStep a hp hq (stateSeq a hp hq n)).2.j = _
+        simp only [greedyStep]
+        rw [if_pos h]
+      rw [hi', hj', Finset.sum_range_succ, ih]
+      ring
+    · -- negative branch: j increments, i unchanged
+      have hi' : (stateSeq a hp hq (n+1)).j = (stateSeq a hp hq n).j + 1 := by
+        show (greedyStep a hp hq (stateSeq a hp hq n)).2.j = _
+        simp only [greedyStep]
+        rw [if_neg h]
+      have hj' : (stateSeq a hp hq (n+1)).i = (stateSeq a hp hq n).i := by
+        show (greedyStep a hp hq (stateSeq a hp hq n)).2.i = _
+        simp only [greedyStep]
+        rw [if_neg h]
+      rw [hi', hj', Finset.sum_range_succ, ih]
+      ring
+
+lemma hij_sum (a : ℕ → ℝ) (hp : ℕ ≃ {n | a n ≥ 0}) (hq : ℕ ≃ {n | a n < 0})  : ∀ n, (stateSeq a hp hq n).i + (stateSeq a hp hq n).j = n := by
+  intro n
+  induction n with
+  | zero => simp [stateSeq, initialState]
+  | succ n ih =>
+    show (greedyStep a hp hq (stateSeq a hp hq n)).2.i + (greedyStep a hp hq (stateSeq a hp hq n)).2.j = n + 1
+    simp only [greedyStep]
+    split_ifs with h
+    · simp only; omega
+    · simp only; omega
+
 theorem permute_diverges_of_divergent {a: ℕ → ℝ} (ha: (a:Series).converges)
   (ha': ¬ (a:Series).absConverges)  :
   ∃ f : ℕ → ℕ,  Bijective f ∧ atTop.Tendsto (fun N ↦ ((a ∘ f:Series).partial N : EReal)) (nhds ⊤) := by
-  sorry
+  choose h1 h2 using divergent_parts_of_divergent ha ha'
+  set A_plus := { n | a n ≥ 0 }
+  set A_minus := {n | a n < 0 }
+  have hdisj : Disjoint A_plus A_minus := by
+    rw [Set.disjoint_iff_inter_eq_empty]; ext; simp [A_plus, A_minus]
+  have hunion : A_plus ∪ A_minus = .univ := by
+    ext; simp [A_plus, A_minus]; grind
+  have hA_plus_inf : Infinite A_plus := by exact (infinite_of_conditionally_convergent ha ha').1
+  have hA_minus_inf : Infinite A_minus := by exact (infinite_of_conditionally_convergent ha ha').2
+  have hA_plus_countable_inf : CountablyInfinite A_plus := by exact Nat.countable_of_infinite A_plus
+  have hA_minus_countable_inf : CountablyInfinite A_minus := by exact Nat.countable_of_infinite A_minus
+  have ⟨fplus, hfplus⟩ := hA_plus_countable_inf
+  have ⟨fminus, hfminus⟩ :=  hA_minus_countable_inf
+  have hp := (Equiv.ofBijective fplus hfplus).symm
+  have hq := (Equiv.ofBijective fminus hfminus).symm
+  have habsiff := AbsConvergent.iff hA_plus_countable_inf (fun (n : A_plus) => a n)
+  have hunbound := (not_iff_not.mpr habsiff).mp h1
+  have hstep0 (M : ℝ) : ∃ n : ℕ, ∑ j ∈ Finset.range n, a (hp j).val > M := by
+    by_contra! h'
+    apply hunbound
+    use M
+    intro y hy
+    simp at hy
+    choose A hA using hy
+    have hcontain : ∃ n, A ⊆ (Finset.range n).image hp := by
+      use (A.image hp.symm).sup id + 1
+      intro x hx
+      simp
+      use hp.symm x
+      constructor
+      · exact Finset.le_sup hx
+      · simp
+    choose n hn using hcontain
+    rw [← hA]
+    calc _ ≤ ∑ x ∈ (Finset.range n).image hp, |a x| := by
+          apply Finset.sum_le_sum_of_subset_of_nonneg hn
+          intro i _ _; positivity
+         _ = ∑ j ∈ Finset.range n, |a (hp j).val|   := by
+          rw [Finset.sum_image]
+          intro x _ y _ hxy
+          exact hp.injective hxy
+         _ = ∑ j ∈ Finset.range n, a (hp j).val     := by
+          apply Finset.sum_congr rfl
+          intro x hx
+          simp
+          exact (hp x).2
+         _ ≤ M := by exact h' n
+  have hstep (start : ℕ) (M : ℝ) : ∃ n : ℕ, ∑ j ∈ Finset.range n, a (hp (start + j)).val > M := by
+    set C := ∑ j ∈ Finset.range start, a (hp j).val with hC
+    obtain ⟨n', hn'⟩ := hstep0 (max (M + C) C)
+    have hmono (p q : ℕ) (hpq : p ≤ q) : ∑ j ∈ range p, a (hp j).val ≤ ∑ j ∈ range q, a (hp j).val := by
+      apply Finset.sum_le_sum_of_subset_of_nonneg
+      · exact range_subset_range.mpr hpq
+      · intro i _ _; exact (hp i).2
+    have hn'_ge : start ≤ n' := by
+      by_contra hlt
+      push_neg at hlt
+      have h1 := hmono n' start (le_of_lt hlt)
+      have h2 : ∑ j ∈ Finset.range n', a (hp j).val > C := lt_of_le_of_lt (le_max_right _ _) hn'
+      linarith
+    have hn'M : ∑ j ∈ Finset.range n', a (hp j).val > M + C := lt_of_le_of_lt (le_max_left _ _) hn'
+    have hsplit : ∑ j ∈ Finset.range n', a (hp j).val
+       = C + ∑ j ∈ Finset.range (n' - start), a (hp (start + j)).val := by
+      rw [hC]
+      rw [← Finset.sum_range_add_sum_Ico (fun j => a (hp j).val) hn'_ge]
+      congr 1
+      rw [Finset.sum_Ico_eq_sum_range]
+    rw [hsplit] at hn'M
+    use n' - start
+    linarith
+  have helper : ∀ K n₀, (stateSeq a hp hq n₀).j = K →
+    ∃ n₁ > n₀, (stateSeq a hp hq n₁).j = K + 1 ∧
+               (stateSeq a hp hq (n₁ - 1)).j = K ∧
+               (stateSeq a hp hq (n₁-1)).s > (K:ℝ) := by
+    intro K n₀ hn₀
+    classical
+    set i₀ := n₀ - K with hi₀_def
+    have hi₀ : (stateSeq a hp hq n₀).i = i₀ := by
+      have h := hij_sum a hp hq n₀
+      omega
+    set s₀ := (stateSeq a hp hq n₀).s with hs₀_def
+    set Q := ∑ m ∈ Finset.range K, a (hq m).val with hQ_def
+    have hs₀_eq : s₀ = ∑ m ∈ Finset.range i₀, a (hp m).val + Q := by
+      rw [hs₀_def, hs_eq a hp hq n₀, hi₀, hn₀]
+    obtain ⟨l0, hl0⟩ := hstep i₀ ((K:ℝ) - s₀)
+    have hex : ∃ l, s₀ + ∑ m ∈ Finset.range l, a (hp (i₀ + m)).val > (K:ℝ) := ⟨l0, by linarith⟩
+    set lstar := Nat.find hex with hlstar_def
+    have hlstar_spec : s₀ + ∑ m ∈ Finset.range lstar, a (hp (i₀ + m)).val > (K:ℝ) := Nat.find_spec hex
+    have hlstar_min : ∀ l' < lstar, ¬ (s₀ + ∑ m ∈ Finset.range l', a (hp (i₀ + m)).val > (K:ℝ)) :=
+      fun l' hl' => Nat.find_min hex hl'
+    have hKn₀ : K ≤ n₀ := by
+        have := hij_sum a hp hq n₀
+        omega
+    have hj_const : ∀ l ≤ lstar, (stateSeq a hp hq (n₀+l)).j = K := by
+      intro l hl
+      induction l with
+      | zero => simpa using hn₀
+      | succ l ih =>
+        have hjl := ih (by omega)
+        have hil : (stateSeq a hp hq (n₀+l)).i = i₀ + l := by
+          have h := hij_sum a hp hq (n₀+l)
+          omega
+        have hsl : (stateSeq a hp hq (n₀+l)).s
+            = s₀ + ∑ m ∈ Finset.range l, a (hp (i₀+m)).val := by
+          rw [hs_eq a hp hq (n₀+l), hil, hjl, hs₀_eq]
+          rw [Finset.sum_range_add]
+          rw [hQ_def]
+          ring
+        have hsl_le : (stateSeq a hp hq (n₀+l)).s ≤ (K:ℝ) := by
+          rw [hsl]
+          have hnotgt := hlstar_min l (by omega)
+          push_neg at hnotgt
+          exact hnotgt
+        show (greedyStep a hp hq (stateSeq a hp hq (n₀+l))).2.j = K
+        simp only [greedyStep]
+        rw [if_pos (by rw [stateSeq_k_eq_j, hjl]; exact_mod_cast hsl_le)]
+        simpa using hjl
+    -- at l = lstar, s exceeds k, so the NEXT step (lstar+1) takes the negative branch
+    have hjlstar := hj_const lstar (le_refl _)
+    have hilstar : (stateSeq a hp hq (n₀+lstar)).i = i₀ + lstar := by
+      have h := hij_sum a hp hq (n₀+lstar)
+      rw [hjlstar] at h
+      rw [hi₀_def]
+      omega
+    have hslstar : (stateSeq a hp hq (n₀+lstar)).s
+      = s₀ + ∑ m ∈ Finset.range lstar, a (hp (i₀+m)).val := by
+      rw [hs_eq a hp hq (n₀+lstar), hilstar, hjlstar, hs₀_eq]
+      rw [Finset.sum_range_add, hQ_def]
+      ring
+    have hslstar_gt : (stateSeq a hp hq (n₀+lstar)).s > (K:ℝ) := by
+      rw [hslstar]; exact hlstar_spec
+    refine ⟨n₀ + lstar + 1, by omega, ?_, ?_, ?_⟩
+    · show (greedyStep a hp hq (stateSeq a hp hq (n₀+lstar))).2.j = K + 1
+      simp only [greedyStep]
+      rw [if_neg (not_le.mpr (by rw [stateSeq_k_eq_j, hjlstar]; exact_mod_cast hslstar_gt))]
+      simpa using hjlstar
+    · simpa using hjlstar
+    · simpa using hslstar_gt
+  have hj_unbounded : ∀ K, ∃ n, (stateSeq a hp hq n).j ≥ K := by
+    intro K
+    induction K with
+    | zero => exact ⟨0, by simp [stateSeq, initialState]⟩
+    | succ K ih =>
+      obtain ⟨n₀, hn₀⟩ := ih
+      obtain ⟨n₁, _, hn₁⟩ := helper (stateSeq a hp hq n₀).j n₀ rfl
+      exact ⟨n₁, by omega⟩
+  have hi_unbounded : ∀ N, ∃ n, (stateSeq a hp hq n).i ≥ N := by
+    by_contra hcon
+    push_neg at hcon
+    obtain ⟨I, hI⟩ := hcon  -- hI : ∀ n, i(n) < I
+    -- P(I) is a fixed bound on s(n) when i(n) ≤ I
+    set PI := ∑ m ∈ Finset.range I, a (hp m).val with hPI_def
+    -- Q(j) ≤ 0 always (negative terms)
+    have hQ_nonpos : ∀ j, ∑ m ∈ Finset.range j, a (hq m).val ≤ 0 := by
+      intro j
+      apply Finset.sum_nonpos
+      intro m _
+      exact le_of_lt (hq m).2
+    -- s(n) ≤ PI for all n
+    have hs_le : ∀ n, (stateSeq a hp hq n).s ≤ PI := by
+      intro n
+      rw [hs_eq a hp hq n]
+      have h1 : ∑ m ∈ Finset.range (stateSeq a hp hq n).i, a (hp m).val ≤ PI := by
+        apply Finset.sum_le_sum_of_subset_of_nonneg (Finset.range_mono (le_of_lt (hI n)))
+        intro i _ _; exact (hp i).2
+      have h2 := hQ_nonpos (stateSeq a hp hq n).j
+      linarith
+    -- find N₀ with j(N₀) > PI (using hj_unbounded; j→∞ means eventually j(n) > any bound)
+    obtain ⟨N₀, hN₀⟩ := hj_unbounded (⌈PI⌉₊ + 1)
+    have h1 : (⌈PI⌉₊:ℝ) + 1 ≤ (stateSeq a hp hq N₀).j := by exact_mod_cast hN₀
+    have hjN₀_gt : (PI:ℝ) < (stateSeq a hp hq N₀).j := by
+      calc PI ≤ (⌈PI⌉₊:ℝ) := Nat.le_ceil PI
+        _ < (⌈PI⌉₊:ℝ) + 1 := by linarith
+        _ ≤ (stateSeq a hp hq N₀).j := h1
+    have hj_ge : ∀ n ≥ N₀, (PI:ℝ) < (stateSeq a hp hq n).j := by
+      intro n hn
+      calc PI < (stateSeq a hp hq N₀).j := hjN₀_gt
+        _ ≤ (stateSeq a hp hq n).j := by exact_mod_cast stateSeq_j_mono' a hp hq N₀ n hn
+    -- so for n ≥ N₀, s(n) ≤ PI < j(n) = k(n), forcing positive branch every step
+    have hi_step : ∀ n ≥ N₀, (stateSeq a hp hq (n+1)).i = (stateSeq a hp hq n).i + 1 := by
+      intro n hn
+      show (greedyStep a hp hq (stateSeq a hp hq n)).2.i = _
+      simp only [greedyStep]
+      rw [if_pos]
+      rw [stateSeq_k_eq_j]
+      have h1 := hs_le n
+      have h2 := hj_ge n hn
+      linarith
+    have hi_grows : ∀ m, (stateSeq a hp hq (N₀+m)).i = (stateSeq a hp hq N₀).i + m := by
+      intro m
+      induction m with
+      | zero => simp
+      | succ m ih =>
+          rw [show N₀+(m+1) = (N₀+m)+1 from rfl, hi_step (N₀+m) (by omega), ih]
+          linarith
+    obtain ⟨m, hm⟩ : ∃ m, (stateSeq a hp hq N₀).i + m ≥ I := ⟨I, by omega⟩
+    exact absurd (hi_grows m ▸ hm : (stateSeq a hp hq (N₀+m)).i ≥ I) (not_le.mpr (hI (N₀+m)))
+  have hf_pos_branch : ∀ n, (stateSeq a hp hq n).s ≤ ((stateSeq a hp hq n).k : ℝ) →
+      f a hp hq n = (hp (stateSeq a hp hq n).i).val ∧
+      (stateSeq a hp hq (n+1)).i = (stateSeq a hp hq n).i + 1 ∧
+      (stateSeq a hp hq (n+1)).j = (stateSeq a hp hq n).j := by
+    intro n h
+    unfold f
+    show (greedyStep a hp hq (stateSeq a hp hq n)).1 = _ ∧
+        (greedyStep a hp hq (stateSeq a hp hq n)).2.i = _ ∧
+        (greedyStep a hp hq (stateSeq a hp hq n)).2.j = _
+    simp only [greedyStep]
+    rw [if_pos h]
+    refine ⟨rfl, rfl, rfl⟩
+  have hf_neg_branch : ∀ n, ¬((stateSeq a hp hq n).s ≤ ((stateSeq a hp hq n).k : ℝ)) →
+      f a hp hq n = (hq (stateSeq a hp hq n).j).val ∧
+      (stateSeq a hp hq (n+1)).j = (stateSeq a hp hq n).j + 1 ∧
+      (stateSeq a hp hq (n+1)).i = (stateSeq a hp hq n).i := by
+    intro n h
+    unfold f
+    show (greedyStep a hp hq (stateSeq a hp hq n)).1 = _ ∧
+        (greedyStep a hp hq (stateSeq a hp hq n)).2.j = _ ∧
+        (greedyStep a hp hq (stateSeq a hp hq n)).2.i = _
+    simp only [greedyStep]
+    rw [if_neg h]
+    refine ⟨rfl, rfl, rfl⟩
+  have hi_strict_on_pos : ∀ n, (stateSeq a hp hq n).s ≤ ((stateSeq a hp hq n).k:ℝ) →
+      (stateSeq a hp hq n).i < (stateSeq a hp hq (n+1)).i := by
+    intro n h
+    obtain ⟨_, hi', _⟩ := hf_pos_branch n h
+    omega
+  have hj_strict_on_neg : ∀ n, ¬((stateSeq a hp hq n).s ≤ ((stateSeq a hp hq n).k:ℝ)) →
+      (stateSeq a hp hq n).j < (stateSeq a hp hq (n+1)).j := by
+    intro n h
+    obtain ⟨_, hj', _⟩ := hf_neg_branch n h
+    omega
+  have hi_const_on_neg : ∀ n, ¬((stateSeq a hp hq n).s ≤ ((stateSeq a hp hq n).k:ℝ)) →
+      (stateSeq a hp hq n).i = (stateSeq a hp hq (n+1)).i := by
+    intro n h
+    obtain ⟨_, _, hi'⟩ := hf_neg_branch n h
+    omega
+  have hj_const_on_pos : ∀ n, (stateSeq a hp hq n).s ≤ ((stateSeq a hp hq n).k:ℝ) →
+      (stateSeq a hp hq n).j = (stateSeq a hp hq (n+1)).j := by
+    intro n h
+    obtain ⟨_, _, hj'⟩ := hf_pos_branch n h
+    omega
+  have hi_lt_of_pos_step : ∀ m n, m < n → (stateSeq a hp hq m).s ≤ ((stateSeq a hp hq m).k:ℝ) →
+    (stateSeq a hp hq m).i < (stateSeq a hp hq n).i := by
+    intro m n hmn hpos
+    have h1 := hi_strict_on_pos m hpos
+    have h2 : (stateSeq a hp hq (m+1)).i ≤ (stateSeq a hp hq n).i := stateSeq_i_mono' a hp hq (m+1) n hmn
+    omega
+  have hj_lt_of_neg_step : ∀ m n, m < n → ¬((stateSeq a hp hq m).s ≤ ((stateSeq a hp hq m).k:ℝ)) →
+    (stateSeq a hp hq m).j < (stateSeq a hp hq n).j := by
+    intro m n hmn hneg
+    have h1 := hj_strict_on_neg m hneg
+    have h2 : (stateSeq a hp hq (m+1)).j ≤ (stateSeq a hp hq n).j := stateSeq_j_mono' a hp hq (m+1) n hmn
+    omega
+  have hf_inj : Function.Injective (f a hp hq) := by
+    suffices main : ∀ m n, m < n → f a hp hq m ≠ f a hp hq n by
+      intro m n hmn
+      rcases lt_trichotomy m n with h | h | h
+      · exact absurd hmn (main m n h)
+      · exact h
+      · exact absurd hmn.symm (main n m h)
+    intro m n hlt hmn
+    by_cases hm : (stateSeq a hp hq m).s ≤ ((stateSeq a hp hq m).k:ℝ)
+    · by_cases hn : (stateSeq a hp hq n).s ≤ ((stateSeq a hp hq n).k:ℝ)
+      · obtain ⟨hfm, _, _⟩ := hf_pos_branch m hm
+        obtain ⟨hfn, _, _⟩ := hf_pos_branch n hn
+        rw [hfm, hfn] at hmn
+        have hinj := hp.injective (Subtype.ext hmn)
+        have hlt' := hi_lt_of_pos_step m n hlt hm
+        omega
+      · obtain ⟨hfm, _, _⟩ := hf_pos_branch m hm
+        obtain ⟨hfn, _, _⟩ := hf_neg_branch n hn
+        rw [hfm, hfn] at hmn
+        have h1 : (hp (stateSeq a hp hq m).i).val ∈ A_plus := (hp _).2
+        have h2 : (hq (stateSeq a hp hq n).j).val ∈ A_minus := (hq _).2
+        rw [hmn] at h1
+        exact Set.disjoint_left.mp hdisj h1 h2
+    · by_cases hn : (stateSeq a hp hq n).s ≤ ((stateSeq a hp hq n).k:ℝ)
+      · obtain ⟨hfm, _, _⟩ := hf_neg_branch m hm
+        obtain ⟨hfn, _, _⟩ := hf_pos_branch n hn
+        rw [hfm, hfn] at hmn
+        have h1 : (hq (stateSeq a hp hq m).j).val ∈ A_minus := (hq _).2
+        have h2 : (hp (stateSeq a hp hq n).i).val ∈ A_plus := (hp _).2
+        rw [← hmn] at h2
+        exact Set.disjoint_left.mp hdisj h2 h1
+      · obtain ⟨hfm, _, _⟩ := hf_neg_branch m hm
+        obtain ⟨hfn, _, _⟩ := hf_neg_branch n hn
+        rw [hfm, hfn] at hmn
+        have hinj := hq.injective (Subtype.ext hmn)
+        have hlt' := hj_lt_of_neg_step m n hlt hm
+        omega
+  have hi_hits_value : ∀ m, ∃ n, (stateSeq a hp hq n).i = m := by
+    intro m
+    induction m with
+    | zero => exact ⟨0, by simp [stateSeq, initialState]⟩
+    | succ m ih =>
+          obtain ⟨n₀, hn₀⟩ := ih
+          -- i(n₀) = m. Find smallest n ≥ n₀ with i(n) = m+1, using i monotone, step ≤ +1, i unbounded
+          obtain ⟨N, hN⟩ := hi_unbounded (m+1)
+          -- i(N) ≥ m+1 > m = i(n₀), and i increases by ≤1 each step, so i hits m+1 somewhere in (n₀, N]
+          have hi_step_le : ∀ k, (stateSeq a hp hq (k+1)).i ≤ (stateSeq a hp hq k).i + 1 := by
+            intro k
+            show (greedyStep a hp hq (stateSeq a hp hq k)).2.i ≤ _
+            simp only [greedyStep]
+            split_ifs <;> simp
+          -- by discrete IVT: ∃ n ∈ [n₀, N], i(n) = m+1
+          have hNn₀ : n₀ ≤ N := by
+            by_contra hcon
+            push_neg at hcon
+            have := stateSeq_i_mono' a hp hq N n₀ (le_of_lt hcon)
+            omega
+          -- find first n ≥ n₀ with i(n) ≥ m+1
+          have hex : ∃ n, n₀ ≤ n ∧ (stateSeq a hp hq n).i ≥ m + 1 := ⟨N, hNn₀, hN⟩
+          classical
+          obtain ⟨n, hn_ge, hin⟩ := hex
+          -- minimal such n
+          set nstar := Nat.find (⟨n, hn_ge, hin⟩ : ∃ n, n₀ ≤ n ∧ (stateSeq a hp hq n).i ≥ m+1) with hnstar_def
+          have hnstar_spec := Nat.find_spec (⟨n, hn_ge, hin⟩ : ∃ n, n₀ ≤ n ∧ (stateSeq a hp hq n).i ≥ m+1)
+          obtain ⟨hnstar_ge, hnstar_i⟩ := hnstar_spec
+          have hnstar_pos : nstar > n₀ := by
+            by_contra hcon
+            push_neg at hcon
+            have heq : nstar = n₀ := le_antisymm hcon hnstar_ge
+            have : (stateSeq a hp hq nstar).i = m := heq ▸ hn₀
+            rw [← hnstar_def] at hnstar_i
+            omega
+          -- i(nstar - 1) < m+1 (else nstar-1 would also satisfy, contradicting minimality)
+          have hnstar_pred : (stateSeq a hp hq (nstar-1)).i < m + 1 := by
+            have hmin := Nat.find_min (⟨n, hn_ge, hin⟩ : ∃ n, n₀ ≤ n ∧ (stateSeq a hp hq n).i ≥ m+1)
+              (show nstar - 1 < nstar by omega)
+            push_neg at hmin
+            exact hmin (by omega)
+          -- i(nstar-1) ≥ m (since i(n₀)=m, monotone, n₀ ≤ nstar-1)
+          have hnstar_pred_ge : (stateSeq a hp hq (nstar-1)).i ≥ m := by
+            rw [← hn₀]
+            exact stateSeq_i_mono' a hp hq n₀ (nstar-1) (by omega)
+          -- so i(nstar-1) = m, and i(nstar) ≥ m+1, with i(nstar) ≤ i(nstar-1)+1 = m+1, so i(nstar)=m+1
+          have heq : (stateSeq a hp hq (nstar-1)).i = m := by omega
+          have hstep_bound := hi_step_le (nstar-1)
+          rw [show nstar - 1 + 1 = nstar from by omega] at hstep_bound
+          use nstar
+          rw [← hnstar_def] at hnstar_i
+          omega
+  have hj_hits_value : ∀ K, ∃ n, (stateSeq a hp hq n).j = K := by
+    intro K
+    induction K with
+    | zero => exact ⟨0, by simp [stateSeq, initialState]⟩
+    | succ K ih =>
+      obtain ⟨n₀, hn₀⟩ := ih
+      obtain ⟨n₁, _, hn₁, _, _⟩ := helper K n₀ hn₀
+      exact ⟨n₁, hn₁⟩
+  have hi_step_le : ∀ k, (stateSeq a hp hq (k+1)).i ≤ (stateSeq a hp hq k).i + 1 := by
+    intro k
+    show (greedyStep a hp hq (stateSeq a hp hq k)).2.i ≤ _
+    simp only [greedyStep]
+    split_ifs <;> simp
+  have helper_i : ∀ m n₀, (stateSeq a hp hq n₀).i = m →
+    ∃ n, (stateSeq a hp hq n).i = m ∧
+         (stateSeq a hp hq n).s ≤ ((stateSeq a hp hq n).k:ℝ) ∧
+         f a hp hq n = (hp m).val := by
+    intro m n₀ hn₀
+    classical
+    obtain ⟨N, hN⟩ := hi_unbounded (m+1)
+    have hNn₀ : n₀ ≤ N := by
+      by_contra hcon
+      push_neg at hcon
+      have := stateSeq_i_mono' a hp hq N n₀ (le_of_lt hcon)
+      omega
+    have hex : ∃ n, n₀ ≤ n ∧ (stateSeq a hp hq n).i ≥ m + 1 := ⟨N, hNn₀, hN⟩
+    set nstar := Nat.find hex with hnstar_def
+    have hnstar_spec := Nat.find_spec hex
+    obtain ⟨hnstar_ge, hnstar_i⟩ := hnstar_spec
+    have hnstar_i' : (stateSeq a hp hq nstar).i ≥ m + 1 := hnstar_i
+    have hnstar_pos : nstar > n₀ := by
+      by_contra hcon
+      push_neg at hcon
+      have heq : nstar = n₀ := le_antisymm hcon hnstar_ge
+      have h1 : (stateSeq a hp hq nstar).i = m := heq ▸ hn₀
+      omega
+    have hnstar_pred_lt : (stateSeq a hp hq (nstar-1)).i < m + 1 := by
+      have hmin := Nat.find_min hex (show nstar - 1 < nstar by omega)
+      push_neg at hmin
+      exact hmin (by omega)
+    have hnstar_pred_ge : (stateSeq a hp hq (nstar-1)).i ≥ m := by
+      rw [← hn₀]
+      exact stateSeq_i_mono' a hp hq n₀ (nstar-1) (by omega)
+    have heq : (stateSeq a hp hq (nstar-1)).i = m := by omega
+    have hi_step_le' := hi_step_le (nstar-1)
+    rw [show nstar - 1 + 1 = nstar from by omega] at hi_step_le'
+    have hieq : (stateSeq a hp hq nstar).i = m + 1 := by omega
+    have hpos : (stateSeq a hp hq (nstar-1)).s ≤ ((stateSeq a hp hq (nstar-1)).k:ℝ) := by
+      by_contra hcon
+      have h1 := hi_const_on_neg (nstar-1) hcon
+      rw [show nstar - 1 + 1 = nstar from by omega] at h1
+      omega
+    obtain ⟨hf, _, _⟩ := hf_pos_branch (nstar-1) hpos
+    exact ⟨nstar - 1, heq, hpos, by rw [hf, heq]⟩
+  have helper_j : ∀ K, ∃ n, (stateSeq a hp hq n).j = K ∧ f a hp hq n = (hq K).val := by
+    intro K
+    classical
+    obtain ⟨n₀, hn₀⟩ := hj_hits_value K
+    obtain ⟨n₁, hn₁_gt, hn₁⟩ := helper K n₀ hn₀
+    have hj_step_le : ∀ k, (stateSeq a hp hq (k+1)).j ≤ (stateSeq a hp hq k).j + 1 := by
+      intro k
+      show (greedyStep a hp hq (stateSeq a hp hq k)).2.j ≤ _
+      simp only [greedyStep]
+      split_ifs <;> simp
+    have hex : ∃ n, n₀ ≤ n ∧ (stateSeq a hp hq n).j ≥ K + 1 := ⟨n₁, le_of_lt hn₁_gt, by omega⟩
+    set nstar := Nat.find hex with hnstar_def
+    have hnstar_spec := Nat.find_spec hex
+    obtain ⟨hnstar_ge, hnstar_j⟩ := hnstar_spec
+    have hnstar_j' : (stateSeq a hp hq nstar).j ≥ K + 1 := hnstar_j
+    have hnstar_pos : nstar > n₀ := by
+      by_contra hcon
+      push_neg at hcon
+      have heq : nstar = n₀ := le_antisymm hcon hnstar_ge
+      have h1 : (stateSeq a hp hq nstar).j = K := heq ▸ hn₀
+      omega
+    have hnstar_pred_lt : (stateSeq a hp hq (nstar-1)).j < K + 1 := by
+      have hmin := Nat.find_min hex (show nstar - 1 < nstar by omega)
+      push_neg at hmin
+      exact hmin (by omega)
+    have hnstar_pred_ge : (stateSeq a hp hq (nstar-1)).j ≥ K := by
+      rw [← hn₀]
+      exact stateSeq_j_mono' a hp hq n₀ (nstar-1) (by omega)
+    have heq : (stateSeq a hp hq (nstar-1)).j = K := by omega
+    have hj_step_le' := hj_step_le (nstar-1)
+    rw [show nstar - 1 + 1 = nstar from by omega] at hj_step_le'
+    have hjeq : (stateSeq a hp hq nstar).j = K + 1 := by omega
+    have hneg : ¬((stateSeq a hp hq (nstar-1)).s ≤ ((stateSeq a hp hq (nstar-1)).k:ℝ)) := by
+      by_contra hcon
+      have h1 := hj_const_on_pos (nstar-1) hcon
+      rw [show nstar - 1 + 1 = nstar from by omega] at h1
+      omega
+    obtain ⟨hf, _, _⟩ := hf_neg_branch (nstar-1) hneg
+    exact ⟨nstar - 1, heq, by rw [hf, heq]⟩
+  have hf_surj : Function.Surjective (f a hp hq) := by
+    intro x
+    rcases (hunion ▸ Set.mem_univ x : x ∈ A_plus ∪ A_minus) with hx | hx
+    · obtain ⟨m, hm⟩ := hp.surjective ⟨x, hx⟩
+      obtain ⟨n₀, hn₀⟩ := hi_hits_value m
+      obtain ⟨n, _, _, hf⟩ := helper_i m n₀ hn₀
+      refine ⟨n, ?_⟩
+      rw [hf]
+      exact congrArg Subtype.val hm
+    · obtain ⟨K, hK⟩ := hq.surjective ⟨x, hx⟩
+      obtain ⟨n, _, hf⟩ := helper_j K
+      refine ⟨n, ?_⟩
+      rw [hf]
+      exact congrArg Subtype.val hK
+  set g := (f a hp hq)
+  have hgtt0 : Tendsto (a ∘ g) atTop (nhds 0) := by
+    have htt0 := Series.decay_of_converges ha
+    simp at htt0
+    have htt0' : Tendsto a atTop (nhds 0) := by
+      rw [Metric.tendsto_atTop] at htt0 ⊢
+      intro ε hε
+      choose N hN using htt0 ε hε
+      use N.toNat
+      intro n hn
+      specialize hN n (by omega)
+      simp at hN ⊢
+      exact hN
+    have hg_top : Tendsto g atTop atTop := by
+      exact Injective.nat_tendsto_atTop hf_inj
+    exact Tendsto.comp htt0' hg_top
+  have hq0 : Filter.Tendsto (fun K => a (hq K).val) Filter.atTop (nhds 0) := by
+      have hnK : ∀ K, ∃ n, n ≥ K ∧ g n = (hq K).val := by
+        intro K
+        obtain ⟨n, hjn, hf⟩ := helper_j K
+        refine ⟨n, ?_, hf⟩
+        have := hij_sum a hp hq n
+        omega
+      choose nK hnK_ge hnK_eq using hnK
+      have hnK_atTop : Filter.Tendsto nK Filter.atTop Filter.atTop :=
+         Filter.tendsto_atTop_mono hnK_ge Filter.tendsto_id
+      have : (fun K => a (hq K).val) = (a ∘ g) ∘ nK := by
+        funext K
+        simp [hnK_eq K]
+      rw [this]
+      exact hgtt0.comp hnK_atTop
+  have hs_sum : ∀ M, (stateSeq a hp hq M).s = ∑ k ∈ range M, (a ∘ g) k := by
+      unfold g
+      simp
+      intro M
+      induction M with
+      | zero => simp [stateSeq, initialState]
+      | succ M ih =>
+          rw [Finset.sum_range_succ, ← ih]
+          show (greedyStep a hp hq (stateSeq a hp hq M)).2.s = _
+          simp only [greedyStep]
+          split_ifs <;> grind
+  use g
+  constructor
+  · exact ⟨hf_inj, hf_surj⟩
+  · have heventually := hq0.eventually (eventually_gt_nhds (show (-1:ℝ) < 0 by norm_num))
+    obtain ⟨K₀, hK₀⟩ := heventually.exists_forall_of_atTop
+    have hgood : ∀ K ≥ K₀, ∃ n, (stateSeq a hp hq n).j = K ∧ (stateSeq a hp hq n).s > (K:ℝ) := by
+      intro K _
+      obtain ⟨n₀, hn₀⟩ := hj_hits_value K
+      obtain ⟨n₁, _, _, hjeq, hsgt⟩ := helper K n₀ hn₀
+      exact ⟨n₁ - 1, hjeq, hsgt⟩
+    have htransition : ∀ K ≥ K₀, ∀ n, (stateSeq a hp hq n).j = K → (stateSeq a hp hq n).s > (K:ℝ) →
+        (stateSeq a hp hq (n+1)).j = K + 1 ∧ (stateSeq a hp hq (n+1)).s > (K:ℝ) - 1 := by
+      intro K hK n hjn hsn
+      have hneg : ¬((stateSeq a hp hq n).s ≤ ((stateSeq a hp hq n).k:ℝ)) := by
+        rw [stateSeq_k_eq_j, hjn]
+        push_neg
+        exact_mod_cast hsn
+      obtain ⟨hfeq, hjeq, _⟩ := hf_neg_branch n hneg
+      refine ⟨by omega, ?_⟩
+      have hsstep : (stateSeq a hp hq (n+1)).s = (stateSeq a hp hq n).s + (a∘g) n := by
+        rw [hs_sum, hs_sum, Finset.sum_range_succ]
+      have hterm : (a∘g) n > -1 := by
+        show a (g n) > -1
+        rw [hfeq, hjn]
+        exact hK₀ K hK
+      rw [hsstep]
+      linarith
+    have hs_mono_while_j_const : ∀ n, (stateSeq a hp hq n).s ≤ ((stateSeq a hp hq n).k:ℝ) →
+        (stateSeq a hp hq n).s ≤ (stateSeq a hp hq (n+1)).s := by
+      intro n hpos
+      obtain ⟨hfeq, _, _⟩ := hf_pos_branch n hpos
+      have hsstep : (stateSeq a hp hq (n+1)).s = (stateSeq a hp hq n).s + (a∘g) n := by
+        rw [hs_sum, hs_sum, Finset.sum_range_succ]
+      rw [hsstep]
+      have hnn : (a∘g) n ≥ 0 := by
+        show a (g n) ≥ 0
+        rw [hfeq]
+        exact (hp _).2
+      linarith
+    have hinterval : ∀ K m d, (stateSeq a hp hq m).j = K → (stateSeq a hp hq (m+d)).j = K →
+        (stateSeq a hp hq m).s ≤ (stateSeq a hp hq (m+d)).s := by
+      intro K m d hjm
+      induction d with
+      | zero => simp
+      | succ d ih =>
+        intro hjmd
+        have hjmd' : (stateSeq a hp hq (m+d)).j = K := by
+          have h1 := stateSeq_j_mono' a hp hq m (m+d) (Nat.le_add_right _ _)
+          have h2 := stateSeq_j_mono' a hp hq (m+d) (m+(d+1)) (by linarith)
+          rw [hjm] at h1
+          rw [hjmd] at h2
+          omega
+        have hpos : (stateSeq a hp hq (m+d)).s ≤ ((stateSeq a hp hq (m+d)).k:ℝ) := by
+          by_contra hcon
+          push_neg at hcon
+          have := hj_strict_on_neg (m+d) (not_le.mpr hcon)
+          have heq : m + d + 1 = m + (d+1) := by ring
+          rw [heq] at this
+          omega
+        calc (stateSeq a hp hq m).s ≤ (stateSeq a hp hq (m+d)).s := ih hjmd'
+          _ ≤ (stateSeq a hp hq (m+(d+1))).s := hs_mono_while_j_const (m+d) hpos
+    have hmain : ∀ K ≥ K₀+1, ∀ n, (stateSeq a hp hq n).j = K → (stateSeq a hp hq n).s > (K:ℝ) - 2 := by
+      intro K hK n hjn
+      obtain ⟨nprev, hjprev, hsprev⟩ := hgood (K-1) (by omega)
+      obtain ⟨hjnext, hsnext⟩ := htransition (K-1) (by omega) nprev hjprev hsprev
+      have hK1 : K - 1 + 1 = K := by omega
+      rw [hK1] at hjnext
+      have hK1' : ((K-1:ℕ):ℝ) = (K:ℝ) - 1 := by
+        have : (1:ℕ) ≤ K := by omega
+        push_cast [Nat.cast_sub this]
+        rfl
+      rw [hK1'] at hsnext
+      have hn_ge : n ≥ nprev + 1 := by
+        by_contra hcon
+        push_neg at hcon
+        have h1 := stateSeq_j_mono' a hp hq n nprev (by omega)
+        omega
+      obtain ⟨d, hd⟩ := Nat.exists_eq_add_of_le hn_ge
+      have hmono := hinterval K (nprev+1) d hjnext (by rw [← hd]; exact hjn)
+      rw [← hd] at hmono
+      linarith
+    have key : ∀ N:ℕ , (a∘g:Series).partial N = (stateSeq a hp hq (N+1)).s := by
+      intro N
+      rw [hs_sum]
+      show ∑ n ∈ Finset.Icc (0:ℤ) N, (if n ≥ 0 then a (g n.toNat) else 0) = ∑ k ∈ Finset.range (N+1), a (g k)
+      apply Finset.sum_bij (fun n _ => n.toNat)
+      · intro a ha
+        simp at ha ⊢
+        choose a' ha' using ha
+        omega
+      · intro a ha b hb hab
+        grind
+      · intro b hb
+        use (b:ℤ)
+        simp at hb ⊢
+        exact hb
+      · intro n hn
+        simp at hn
+        lift n to ℕ using by omega
+        simp
+    suffices h : ∀ M:ℝ, ∃ N₀:ℕ, ∀ N ≥ N₀, M < (a ∘ g:Series).partial N by
+      rw [EReal.tendsto_nhds_top_iff_real]
+      intro M
+      choose N₀ hN₀ using h M
+      filter_upwards [Filter.eventually_ge_atTop (N₀:ℤ)]
+      intro n hn
+      lift n to ℕ using by omega
+      simp
+      specialize hN₀ n (by omega)
+      exact hN₀
+    intro M
+    obtain ⟨N₀', hN₀'⟩ := hj_unbounded (max (K₀+1) (⌈M⌉₊ + 3))
+    refine ⟨N₀', fun N hN => ?_⟩
+    rw [key N]
+    have hjN1 : (stateSeq a hp hq (N+1)).j ≥ max (K₀+1) (⌈M⌉₊+3) := by
+      calc (stateSeq a hp hq (N+1)).j ≥ (stateSeq a hp hq N₀').j :=
+            stateSeq_j_mono' a hp hq N₀' (N+1) (by omega)
+        _ ≥ max (K₀+1) (⌈M⌉₊+3) := hN₀'
+    have hK_ge : (stateSeq a hp hq (N+1)).j ≥ K₀ + 1 := le_trans (le_max_left _ _) hjN1
+    have := hmain (stateSeq a hp hq (N+1)).j hK_ge (N+1) rfl
+    have hjN1' : ((stateSeq a hp hq (N+1)).j : ℝ) ≥ (⌈M⌉₊:ℝ) + 3 := by
+      have := le_trans (le_max_right (K₀+1) (⌈M⌉₊+3)) hjN1
+      exact_mod_cast this
+    have hMceil : (M:ℝ) ≤ ⌈M⌉₊ := Nat.le_ceil M
+    linarith
+
+
 
 theorem permute_diverges_of_divergent' {a: ℕ → ℝ} (ha: (a:Series).converges)
-  (ha': ¬ (a:Series).absConverges)  :
+  (ha': ¬ (a:Series).absConverges) :
   ∃ f : ℕ → ℕ,  Bijective f ∧ atTop.Tendsto (fun N ↦ ((a ∘ f:Series).partial N : EReal)) (nhds ⊥) := by
-  sorry
+  have hpartial_neg_gen : ∀ (b:ℕ→ℝ) (N:ℤ), ((-b:ℕ→ℝ):Series).partial N = -((b:Series).partial N) := by
+    intro b N
+    simp only [Series.partial]
+    rw [← Finset.sum_neg_distrib]
+    apply Finset.sum_congr rfl
+    intro n _
+    split_ifs <;> simp
+  have hna : ((-a:ℕ→ℝ):Series).converges := by
+    obtain ⟨L, hL⟩ := ha
+    refine ⟨-L, ?_⟩
+    simp only [Series.convergesTo] at hL ⊢
+    have heq : (fun N => ((-a:ℕ→ℝ):Series).partial N) = (fun N => -((a:Series).partial N)) :=
+      funext (hpartial_neg_gen a)
+    simp
+    convert hL.neg using 1
+  have hna' : ¬ ((-a:ℕ→ℝ):Series).absConverges := by
+    unfold Series.absConverges
+    have habseq : ((-a:ℕ→ℝ):Series).abs = (a:Series).abs := by
+      unfold Series.abs Series.mk'
+      congr 1
+      funext n
+      split_ifs with h
+      simp at h ⊢
+      rw [if_pos h, if_pos h]
+      simp; rfl
+    rw [habseq]
+    exact ha'
+  obtain ⟨f, hf_bij, hf_tendsto⟩ := permute_diverges_of_divergent hna hna'
+  refine ⟨f, hf_bij, ?_⟩
+  have heq : (fun N => (((-a) ∘ f:Series).partial N : EReal)) =
+             (fun N => -((a ∘ f:Series).partial N : EReal)) := by
+    funext N
+    have h1 : ((-a) ∘ f : ℕ → ℝ) = (-(a ∘ f) : ℕ → ℝ) := by funext n; simp [Function.comp]
+    rw [h1, hpartial_neg_gen (a∘f) N]
+    push_cast
+    rfl
+  rw [heq] at hf_tendsto
+  have hres := hf_tendsto.neg
+  simp only [neg_neg, EReal.neg_top] at hres
+  exact hres
 
 
 end Chapter8
