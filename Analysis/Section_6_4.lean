@@ -894,8 +894,11 @@ noncomputable abbrev Example_6_4_9 : Sequence :=
   (fun (n:ℕ) ↦ if Even n then (n+1:ℝ)⁻¹ else -(n+1:ℝ)⁻¹)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 example (n:ℕ) : Example_6_4_9.upperseq n = if Even n then (n+1:ℝ)⁻¹ else (n+2:ℝ)⁻¹ := by sorry
 =======
+=======
+>>>>>>> 0b154c2 (foo)
 lemma example649_even_decreasing {n₁ n₂ : ℕ} (heven₁: Even n₁) (heven₂: Even n₂) (h: n₁ ≤ n₂) :
   (Example_6_4_9:Sequence).seq n₁ ≥  (Example_6_4_9:Sequence).seq n₂ := by
     unfold Example_6_4_9
@@ -903,7 +906,13 @@ lemma example649_even_decreasing {n₁ n₂ : ℕ} (heven₁: Even n₁) (heven�
     field_simp
     rify at h
     grind
+<<<<<<< HEAD
 >>>>>>> 440d3d1 (finally 6_4 is done)
+=======
+=======
+example (n:ℕ) : Example_6_4_9.upperseq n = if Even n then (n+1:ℝ)⁻¹ else (n+2:ℝ)⁻¹ := by sorry
+>>>>>>> 7d575db (Section 6.4: fix Example 6.4.9 upperseq and Example 6.4.10 labels)
+>>>>>>> 0b154c2 (foo)
 
 lemma example649_odd_increasing {n₁ n₂ : ℕ} (hodd₁: Odd n₁) (hodd₂: Odd n₂) (h: n₁ ≤ n₂) :
   (Example_6_4_9:Sequence).seq n₁ ≤  (Example_6_4_9:Sequence).seq n₂ := by
@@ -1252,12 +1261,15 @@ lemma example6410_upperseq_equivalent_def (n:ℕ) : Example_6_4_10.upperseq n = 
     · exact bot_lt_coe _
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 example : Example_6_4_10.limsup = ⊤ := by sorry
 
 example (n:ℕ) : Example_6_4_10.lowerseq n = n+1 := by sorry
 
 example : Example_6_4_10.liminf = ⊤ := by sorry
 =======
+=======
+>>>>>>> 0b154c2 (foo)
 example : Example_6_4_10.limsup = ⊤ := by
   unfold Sequence.limsup
   apply sInf_eq_top.mpr
@@ -1347,7 +1359,17 @@ example : Example_6_4_10.liminf = ⊤ := by
         exact this
     · exact bot_lt_coe _
 
+<<<<<<< HEAD
 >>>>>>> 440d3d1 (finally 6_4 is done)
+=======
+=======
+example : Example_6_4_10.limsup = ⊤ := by sorry
+
+example (n:ℕ) : Example_6_4_10.lowerseq n = n+1 := by sorry
+
+example : Example_6_4_10.liminf = ⊤ := by sorry
+>>>>>>> 7d575db (Section 6.4: fix Example 6.4.9 upperseq and Example 6.4.10 labels)
+>>>>>>> 0b154c2 (foo)
 
 /-- Proposition 6.4.12(a) -/
 theorem Sequence.gt_limsup_bounds {a:Sequence} {x:EReal} (h: x > a.limsup) :
