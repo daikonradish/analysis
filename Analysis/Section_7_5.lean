@@ -552,6 +552,8 @@ theorem Series.poly_mul_geom_converges {x:ℝ} (hx: |x|<1) (q:ℝ) : (fun n:ℕ 
   have habsconv : (fun n:ℕ ↦ (n:ℝ)^q * x^n : Series).absConverges := by
     apply Series.root_test_pos
     simp
+    --have heq : limsup (fun n:ℤ => |(n:ℝ)^q * x^n|^((n:ℝ)⁻¹)) Filter.atTop = limsup (fun n:ℤ ↦ (|if 0 ≤ n then (n.toNat:ℝ) ^ q * x ^ n.toNat else 0| ^ (n:ℝ)⁻¹)) Filter.atTop := by sorry
+    --rw [← heq]
     have hrootconv := Series.root_self_converges
     have hpow := hrootconv.rpow_const (p:=q) (by left; grind); simp at hpow
     have hpowmul := hpow.mul_const |x|; simp at hpowmul
