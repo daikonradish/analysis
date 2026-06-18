@@ -691,7 +691,7 @@ theorem Sequence.bounded_iff_convergent_of_antitone {a:Sequence} (ha: a.IsAntito
 noncomputable abbrev Example_6_3_9 (n:ℕ) := ⌊ Real.pi * 10^n ⌋ / (10:ℝ)^n
 
 /-- Example 6.3.9 -/
-example : (Example_6_3_9:Sequence).IsMonotone := by
+lemma example639Mono : (Example_6_3_9:Sequence).IsMonotone := by
   intro n hn
   simp_all
   lift n to ℕ using (by omega)
@@ -712,23 +712,67 @@ lemma Real.rational_approx_le (r:ℝ) (n:ℕ) : ⌊r * 10^n⌋ / (10^n : ℝ) �
   field_simp
   apply Int.floor_le
 
-example : (Example_6_3_9:Sequence).BddAboveBy 4 := by
-  have hpilt4 : Real.pi ≤ 4 := Real.pi_lt_four
-
-  sorry
+lemma example639BddAbove4 : (Example_6_3_9:Sequence).BddAboveBy 4 := by
+  have factaboutpi := Real.pi_le_four
+  intro n hn
+  simp_all
+  lift n to ℕ using (by omega)
+  simp_all
+  unfold Example_6_3_9
+  have rationalapproxofpi := Real.rational_approx_le (Real.pi) (n)
+  linarith
 
 /-- Example 6.3.9 -/
-example : (Example_6_3_9:Sequence).Convergent := by sorry
+example : (Example_6_3_9:Sequence).Convergent := by
+  exact Sequence.convergent_of_monotone ⟨4, example639BddAbove4⟩ example639Mono
 
 /-- Example 6.3.9 -/
-example : lim (Example_6_3_9:Sequence) ≤ 4 := by sorry
+lemma Real.rational_approx_lt (r : ℝ) (n : ℕ) :
+  r - (⌊r * 10^n⌋ : ℝ) / 10^n < 1 / 10^n := by
+  field_simp
+  have h := Int.lt_floor_add_one (r * 10^n)
+  linarith
+
+example : lim (Example_6_3_9:Sequence) ≤ 4 := by
+  have hlim := Sequence.lim_of_monotone ⟨4, example639BddAbove4⟩ example639Mono
+  have hbyfour := example639BddAbove4
+  rw [Sequence.BddAboveBy] at hbyfour
+  rw [Sequence.sup] at hlim
+  have hfourlb : (4:EReal) ∈ upperBounds {(x:EReal) | ∃ n ≥ (Example_6_3_9:Sequence).m, x = (Example_6_3_9:Sequence).seq n} := by
+    intro x hx
+    obtain ⟨n, hnam, heq⟩ := hx; simp at hnam heq
+    specialize hbyfour n (by grind)
+    simp at hbyfour
+    rw [if_pos (by grind)] at heq hbyfour
+    rw [heq]
+    exact EReal.coe_le_coe hbyfour
+  have hfourlesup : sSup {(x:EReal) | ∃ n ≥ (Example_6_3_9:Sequence).m, x = (Example_6_3_9:Sequence).seq n} ≤ 4 := by
+    apply csSup_le
+    · unfold Example_6_3_9
+      use (((⌊ Real.pi * 10^0 ⌋ / (10:ℝ)^0):ℝ):EReal)
+      simp_all
+      use 0
+      constructor
+      · simp
+      · simp_all
+    · exact hfourlb
+  rw [← hlim] at hfourlesup
+  exact EReal.coe_le_coe_iff.mp hfourlesup
 
 /-- Proposition 6.3.1-/
 theorem lim_of_exp {x:ℝ} (hpos: 0 < x) (hbound: x < 1) :
     ((fun (n:ℕ) ↦ x^n):Sequence).Convergent ∧ lim ((fun (n:ℕ) ↦ x^n):Sequence) = 0 := by
   -- This proof is written to follow the structure of the original text.
   set a := ((fun (n:ℕ) ↦ x^n):Sequence)
-  have why : a.IsAntitone := sorry
+  have why : a.IsAntitone := by
+    intro z hz
+    unfold a; dsimp
+    split_ifs with h1
+    · have : (z + 1).toNat = z.toNat + 1 := by exact Int.toNat_add (by linarith) (by linarith)
+      rw [this, pow_add]
+      field_simp
+      grind
+    · positivity
   have hbound : a.BddBelowBy 0 := by intro n _; positivity
   have hbound' : a.BddBelow := by use 0
   have hconv := a.convergent_of_antitone hbound' why
@@ -736,12 +780,34 @@ theorem lim_of_exp {x:ℝ} (hpos: 0 < x) (hbound: x < 1) :
   have : lim ((fun (n:ℕ) ↦ x^(n+1)):Sequence) = x * L := by
     rw [←(a.lim_smul x hconv).2]; congr; ext n; rfl
     simp [a, pow_succ', HSMul.hSMul, SMul.smul]
-  have why2 : lim ((fun (n:ℕ) ↦ x^(n+1)):Sequence) = lim ((fun (n:ℕ) ↦ x^n):Sequence) := by sorry
+  have why2 : lim ((fun (n:ℕ) ↦ x^(n+1)):Sequence) = lim ((fun (n:ℕ) ↦ x^n):Sequence) := by
+    suffices alternatively : ((fun (n:ℕ) ↦ x^(n+1)):Sequence).TendsTo L by
+      exact (Sequence.lim_eq.mp alternatively).2
+    rw [Sequence.tendsTo_iff]
+    intro ε hε
+    obtain ⟨N, hN⟩ := (Sequence.tendsTo_iff a L).mp (a.lim_def hconv) ε hε
+    use max N 0
+    intro n hn
+    specialize hN (n+1) (by linarith only [le_of_max_le_left hn])
+    unfold a at hN
+    simp at hN ⊢
+    rw [if_pos (by linarith only [le_of_max_le_right hn])] at hN
+    rw [if_pos (le_of_max_le_right hn)] at ⊢
+    have : (n + 1).toNat = n.toNat + 1 := by exact Int.toNat_add (by linarith only [le_of_max_le_right hn]) (by linarith)
+    rwa [this] at hN
   convert_to x * L = 1 * L at why2; simp [a,L]
   have hx : x ≠ 1 := by grind
   simp_all [-one_mul]
 
 /-- Exercise 6.3.4 -/
-theorem lim_of_exp' {x:ℝ} (hbound: x > 1) : ¬((fun (n:ℕ) ↦ x^n):Sequence).Convergent := by sorry
+theorem lim_of_exp' {x:ℝ} (hbound: x > 1) : ¬((fun (n:ℕ) ↦ x^n):Sequence).Convergent := by
+  by_contra hconv
+  have hbd := Sequence.bounded_of_convergent hconv
+  obtain ⟨B, hBpos, hB⟩ := hbd
+  rw [Sequence.BoundedBy] at hB
+  have hunbound := pow_unbounded_of_one_lt B hbound
+  obtain ⟨N, hN⟩ := hunbound
+  specialize hB N; simp at hB
+  grind
 
 end Chapter6

@@ -34,43 +34,49 @@ abbrev Sequence.LimitPoint (a:Sequence) (x:ℝ) : Prop :=
 theorem Sequence.limit_point_def (a:Sequence) (x:ℝ) :
   a.LimitPoint x ↔ ∀ ε > 0, ∀ N ≥ a.m, ∃ n ≥ N, |a n - x| ≤ ε := by
     unfold LimitPoint Real.ContinuallyAdherent Real.Adherent
-    sorry
+    peel with ε hε
+    peel with N hN
+    constructor
+    · intro hclose
+      simp_all
+      obtain ⟨N₀, hN₀, hN₀dist⟩ := hclose
+      use N₀
+      constructor
+      · exact hN₀
+      · rwa [if_pos (hN₀), Real.dist_eq] at hN₀dist
+    · intro habs
+      obtain ⟨N₀, hN₀, hN₀abs⟩ := habs
+      use N₀
+      constructor
+      · simp_all
+      · simp_all
+        rwa [Real.dist_eq]
 
-noncomputable abbrev Example_6_4_3 : Sequence := (fun (n:ℕ) ↦ 1 - (10:ℝ)^(-(n:ℤ)-1))
-
-/-- Example 6.4.3 -/
-example : (0.1:ℝ).Adherent Example_6_4_3 0.8 := by sorry
-
-/-- Example 6.4.3 -/
-example : ¬ (0.1:ℝ).ContinuallyAdherent Example_6_4_3 0.8 := by sorry
-
-/-- Example 6.4.3 -/
-example : (0.1:ℝ).ContinuallyAdherent Example_6_4_3 1 := by sorry
-
-/-- Example 6.4.3 -/
-example : Example_6_4_3.LimitPoint 1 := by sorry
-
-noncomputable abbrev Example_6_4_4 : Sequence :=
-  (fun (n:ℕ) ↦ (-1:ℝ)^n * (1 + (10:ℝ)^(-(n:ℤ)-1)))
-
-/-- Example 6.4.4 -/
-example : (0.1:ℝ).Adherent Example_6_4_4 1 := by sorry
-
-/-- Example 6.4.4 -/
-example : (0.1:ℝ).ContinuallyAdherent Example_6_4_4 1 := by sorry
-
-/-- Example 6.4.4 -/
-example : Example_6_4_4.LimitPoint 1 := by sorry
-
-/-- Example 6.4.4 -/
-example : Example_6_4_4.LimitPoint (-1) := by sorry
-
-/-- Example 6.4.4 -/
-example : ¬ Example_6_4_4.LimitPoint 0 := by sorry
+/-REINSERT HERE!!!  https://gist.github.com/daikonradish/20c0e097f74ad55d109a2cc2b114cb1c-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
 
 /-- Proposition 6.4.5 / Exercise 6.4.1 -/
 theorem Sequence.limit_point_of_limit {a:Sequence} {x:ℝ} (h: a.TendsTo x) : a.LimitPoint x := by
-  sorry
+  rw [Sequence.tendsTo_iff] at h
+  rw [Sequence.limit_point_def]
+  intro ε hε N hNam
+  obtain ⟨M, hM⟩ := h ε hε
+  use max N M
+  constructor <;> simp_all
 
 /-- Proposition 6.4.5 / Exercise 6.4.1 -/
 theorem Sequence.limit_point_of_limit_unique {a:Sequence} {x y:ℝ} (h: a.TendsTo x) (hy: a.LimitPoint y) : x = y := by
@@ -91,55 +97,478 @@ noncomputable abbrev Sequence.lowerseq (a:Sequence) : ℤ → EReal := fun N ↦
 noncomputable abbrev Sequence.liminf (a:Sequence) : EReal :=
   sSup { x | ∃ N ≥ a.m, x = a.lowerseq N }
 
-noncomputable abbrev Example_6_4_7 : Sequence := (fun (n:ℕ) ↦ (-1:ℝ)^n * (1 + (10:ℝ)^(-(n:ℤ)-1)))
 
-example (n:ℕ) :
-    Example_6_4_7.upperseq n = if Even n then 1 + (10:ℝ)^(-(n:ℤ)-1) else 1 + (10:ℝ)^(-(n:ℤ)-2) := by
-  sorry
-
-example : Example_6_4_7.limsup = 1 := by sorry
-
-example (n:ℕ) :
-    Example_6_4_7.lowerseq n
-    = if Even n then -(1 + (10:ℝ)^(-(n:ℤ)-2)) else -(1 + (10:ℝ)^(-(n:ℤ)-1)) := by
-  sorry
-
-example : Example_6_4_7.liminf = -1 := by sorry
-
-example : Example_6_4_7.sup = (1.1:ℝ) := by sorry
-
-example : Example_6_4_7.inf = (-1.01:ℝ) := by sorry
-
-noncomputable abbrev Example_6_4_8 : Sequence := (fun (n:ℕ) ↦ if Even n then (n+1:ℝ) else -(n:ℝ)-1)
-
-example (n:ℕ) : Example_6_4_8.upperseq n = ⊤ := by sorry
-
-example : Example_6_4_8.limsup = ⊤ := by sorry
-
-example (n:ℕ) : Example_6_4_8.lowerseq n = ⊥ := by sorry
-
-example : Example_6_4_8.liminf = ⊥ := by sorry
+/- REINSERT HERE!!!!!-/
+/-https://gist.github.com/daikonradish/b3ba1b4319164d0dbd2f87647e8b5bc8-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
+/- REINSERT HERE!!!!!-/
 
 noncomputable abbrev Example_6_4_9 : Sequence :=
   (fun (n:ℕ) ↦ if Even n then (n+1:ℝ)⁻¹ else -(n+1:ℝ)⁻¹)
 
+<<<<<<< HEAD
 example (n:ℕ) : Example_6_4_9.upperseq n = if Even n then (n+1:ℝ)⁻¹ else (n+2:ℝ)⁻¹ := by sorry
+=======
+lemma example649_even_decreasing {n₁ n₂ : ℕ} (heven₁: Even n₁) (heven₂: Even n₂) (h: n₁ ≤ n₂) :
+  (Example_6_4_9:Sequence).seq n₁ ≥  (Example_6_4_9:Sequence).seq n₂ := by
+    unfold Example_6_4_9
+    simp_all
+    field_simp
+    rify at h
+    grind
+>>>>>>> 440d3d1 (finally 6_4 is done)
 
-example : Example_6_4_9.limsup = 0 := by sorry
+lemma example649_odd_increasing {n₁ n₂ : ℕ} (hodd₁: Odd n₁) (hodd₂: Odd n₂) (h: n₁ ≤ n₂) :
+  (Example_6_4_9:Sequence).seq n₁ ≤  (Example_6_4_9:Sequence).seq n₂ := by
+    observe hnoteven₁ : ¬ Even n₁
+    observe hnoteven₂ : ¬ Even n₂
+    unfold Example_6_4_9
+    simp
+    rw [if_neg hnoteven₁, if_neg hnoteven₂]
+    field_simp
+    rify at h
+    grind
 
-example (n:ℕ) : Example_6_4_9.lowerseq n = if Even n then -(n+2:ℝ)⁻¹ else -(n+1:ℝ)⁻¹ := by sorry
+lemma example649_even_odd {n₁ n₂ : ℕ}  (heven : Even n₁) (hodd: Odd n₂) :
+    (Example_6_4_9:Sequence).seq n₁ ≥  (Example_6_4_9:Sequence).seq n₂ := by
+    unfold Example_6_4_9
+    simp
+    rw [if_pos heven, if_neg (by grind)]
+    field_simp
+    have : (n₁:ℝ) ≥ 0 := by positivity
+    have : (n₂:ℝ) ≥ 0 := by positivity
+    grind
 
-example : Example_6_4_9.liminf = 0 := by sorry
+lemma example649_even_max {n₁ n₂ : ℕ} (heven: Even n₁) (h: n₁ ≤ n₂) :
+  (Example_6_4_9:Sequence).seq n₁ ≥  (Example_6_4_9:Sequence).seq n₂ := by
+  by_cases heven' : Even n₂
+  · exact example649_even_decreasing heven heven' h
+  · rw [Nat.not_even_iff_odd] at heven'
+    exact example649_even_odd heven heven'
+
+lemma example649_odd_min {n₁ n₂ : ℕ} (hodd: Odd n₁) (h: n₁ ≤ n₂) :
+  (Example_6_4_9:Sequence).seq n₁ ≤ (Example_6_4_9:Sequence).seq n₂ := by
+  by_cases hodd' : Odd n₂
+  · exact example649_odd_increasing hodd hodd' h
+  · rw [Nat.not_odd_iff_even] at hodd'
+    exact example649_even_odd hodd' hodd
+
+lemma example649_upperseq_equivalent_def (n:ℕ) : Example_6_4_9.upperseq n = if Even n then (n+1:ℝ)⁻¹ else (n+2:ℝ)⁻¹ := by
+  split_ifs with h
+  · apply le_antisymm
+    · apply csSup_le
+      · use (Example_6_4_9:Sequence).seq n
+        use n; simp_all
+      · intro b hb
+        obtain ⟨N, hNam, hN⟩ := hb
+        simp at hNam
+        have : N ≥ 0 := by grind
+        lift N to ℕ using (by omega)
+        simp at hNam
+        rw [Sequence.from_eval _ (by grind)] at hN
+        rw [hN]
+        norm_cast
+        have : (Example_6_4_9:Sequence).seq n = (n+1:ℝ)⁻¹ := by simp_all
+        norm_cast at this
+        rw [← this]
+        exact example649_even_max h hNam
+    · apply le_csSup
+      · use (Example_6_4_9:Sequence).seq n
+        intro b hb
+        obtain ⟨N, hNam, hN⟩ := hb
+        simp at hNam
+        have : N ≥ 0 := by grind
+        lift N to ℕ using (by omega)
+        simp at hNam
+        rw [Sequence.from_eval _ (by grind)] at hN
+        rw [hN]
+        norm_cast
+        have : (Example_6_4_9:Sequence).seq n = (n+1:ℝ)⁻¹ := by simp_all
+        norm_cast at this
+        exact example649_even_max h hNam
+      · use n; simp_all
+  · have heven : Even (n+1) := by grind
+    have : (Example_6_4_9:Sequence).seq (n+1) = (n+2:ℝ)⁻¹ := by
+      unfold Example_6_4_9
+      simp_all
+      rw [if_pos (by grind)]
+      grind
+    apply le_antisymm
+    · apply csSup_le
+      · use (Example_6_4_9:Sequence).seq n
+        use n; simp_all
+      · intro b hb
+        obtain ⟨N, hNam, hN⟩ := hb
+        simp at hNam
+        have : N ≥ 0 := by grind
+        lift N to ℕ using (by omega)
+        simp at hNam
+        rw [Sequence.from_eval _ (by grind)] at hN
+        rw [hN]
+        norm_cast at this ⊢
+        rw [← this]
+        by_cases heq : N = n
+        · observe hodd : Odd n
+          rw [heq]
+          exact example649_even_odd heven hodd
+        · push_neg at heq
+          have : N ≥ n+1 := by grind
+          exact example649_even_max heven this
+    · apply le_csSup
+      · use (Example_6_4_9:Sequence).seq (n+1)
+        intro b hb
+        obtain ⟨N, hNam, hN⟩ := hb
+        simp at hNam
+        have : N ≥ 0 := by grind
+        lift N to ℕ using (by omega)
+        simp at hNam
+        rw [Sequence.from_eval _ (by grind)] at hN
+        rw [hN]
+        norm_cast
+        by_cases heq : N = n
+        · observe hodd : Odd n
+          rw [heq]
+          exact example649_even_odd heven hodd
+        · push_neg at heq
+          have : N ≥ n+1 := by grind
+          exact example649_even_max heven this
+      · use n+1
+        grind
+
+example : Example_6_4_9.limsup = 0 := by
+  rw [Sequence.limsup]
+  apply csInf_eq_of_forall_ge_of_forall_gt_exists_lt
+  · use Example_6_4_9.seq 0
+    use 0
+    constructor
+    · grind
+    · simp_all
+      have := example649_upperseq_equivalent_def 0
+      simp at this
+      symm at this
+      exact this
+  · intro a ha
+    obtain ⟨N, hNam, hN⟩ := ha
+    simp at hNam
+    lift N to ℕ using (by omega)
+    have := example649_upperseq_equivalent_def N
+    rw [hN, this]
+    rcases Nat.even_or_odd N with (heven | hodd)
+    · simp_all; grind
+    · rw [if_neg (by grind)]
+      positivity
+  · intro w hw
+    obtain ⟨c', heq⟩ | htop | hbot := EReal.def w
+    · rw [← heq] at hw
+      have hw' := EReal.coe_lt_coe_iff.mp hw
+      obtain ⟨N, hN⟩ := exists_nat_gt (1/c')
+      have : 1/c' < ((N+1):ℕ) := by grind
+      field_simp at this
+      use Example_6_4_9.upperseq ((N+1):ℕ)
+      constructor
+      · use (N+1)
+        constructor
+        · grind
+        · simp
+      · rw [← heq, example649_upperseq_equivalent_def (N+1)]
+        split_ifs
+        · norm_cast
+          field_simp
+          grind
+        · norm_cast
+          field_simp
+          grind
+    · rw [htop]
+      use Example_6_4_9.seq Example_6_4_9.m
+      constructor
+      · use Example_6_4_9.m
+        constructor <;> simp_all
+        have := example649_upperseq_equivalent_def 0
+        simp at this
+        symm at this
+        exact this
+      · exact coe_lt_top _
+    · rw [hbot] at hw
+      exact absurd hw not_lt_bot
+
+lemma example649_lowerseq_equivalent_def (n:ℕ) : Example_6_4_9.lowerseq n = if Even n then -(n+2:ℝ)⁻¹ else -(n+1:ℝ)⁻¹ := by
+  split_ifs with hif
+  · have hodd : Odd (n+1) := by grind
+    have : -(n+2:ℝ)⁻¹ = Example_6_4_9.seq (n+1) := by
+      simp_all
+      rw [if_pos (by grind), if_neg (by grind)]
+      grind
+    rw [this]; clear this
+    apply le_antisymm
+    · apply csInf_le
+      · use Example_6_4_9.seq (n+1)
+        intro a ha
+        obtain ⟨N, hNam, hN⟩ := ha
+        simp at hNam
+        lift N to ℕ using (by omega)
+        simp at hNam
+        rw [Sequence.from_eval _ (by grind)] at hN
+        rw [hN]
+        norm_cast
+        by_cases h : N = n
+        · rw [h]
+          exact example649_even_odd hif hodd
+        · have hgt : N ≥ n + 1 := by grind
+          exact example649_odd_min hodd hgt
+      · use (n+1)
+        constructor <;> simp_all
+    · apply le_csInf
+      · use Example_6_4_9.seq n
+        use n
+        constructor <;> simp_all
+      · intro a ha
+        obtain ⟨N, hNam, hN⟩ := ha
+        simp at hNam
+        lift N to ℕ using (by omega)
+        simp at hNam
+        rw [Sequence.from_eval _ (by grind)] at hN
+        rw [hN]
+        norm_cast
+        by_cases h : N = n
+        · rw [h]
+          exact example649_even_odd hif hodd
+        · have hgt : N ≥ n + 1 := by grind
+          exact example649_odd_min hodd hgt
+  · have hodd : Odd n := by grind
+    have : -(n+1:ℝ)⁻¹ = Example_6_4_9.seq n := by simp_all
+    rw [this]; clear this
+    apply le_antisymm
+    · apply csInf_le
+      · use Example_6_4_9.seq n
+        intro a ha
+        obtain ⟨N, hNam, hN⟩ := ha
+        simp at hNam
+        lift N to ℕ using (by omega)
+        simp at hNam
+        rw [Sequence.from_eval _ (by grind)] at hN
+        rw [hN]
+        norm_cast
+        exact example649_odd_min hodd hNam
+      · use n
+        constructor <;> simp_all
+    · apply le_csInf
+      · use Example_6_4_9.seq n
+        use n
+        constructor <;> simp_all
+      · intro b hb
+        obtain ⟨N, hNam, hN⟩ := hb
+        simp at hNam
+        lift N to ℕ using (by omega)
+        simp at hNam
+        rw [Sequence.from_eval _ (by grind)] at hN
+        rw [hN]
+        norm_cast
+        exact example649_odd_min hodd hNam
+
+
+example : Example_6_4_9.liminf = 0 := by
+  rw [Sequence.liminf]
+  apply csSup_eq_of_forall_le_of_forall_lt_exists_gt
+  · use -(2:ℝ)⁻¹
+    use 0
+    constructor
+    · simp_all
+    · have := example649_lowerseq_equivalent_def 0; simp at this
+      symm at this
+      exact this
+  · intro a ha
+    obtain ⟨N, hNam, hN⟩ := ha
+    simp at hNam
+    lift N to ℕ using (by omega)
+    rw [example649_lowerseq_equivalent_def N] at hN
+    rw [hN]
+    rcases Nat.even_or_odd N with (heven | hodd)
+    · simp_all; grind
+    · have : ¬ Even N := by grind
+      rw [if_neg this]
+      simp_all; grind
+  · intro w hw
+    obtain ⟨c', heq⟩ | htop | hbot := EReal.def w
+    · rw [← heq] at hw
+      have hw' := EReal.coe_lt_coe_iff.mp hw
+      observe hcpos : -c' > 0
+      obtain ⟨N, hN⟩ := exists_nat_gt (1/(-c'))
+      rw [div_lt_iff₀ hcpos] at hN
+      use Example_6_4_9.lowerseq ((N+1):ℕ)
+      constructor
+      · use (N+1)
+        constructor
+        · grind
+        · simp
+      · rw [example649_lowerseq_equivalent_def, ← heq]
+        split_ifs
+        · norm_cast
+          field_simp
+          grind
+        · norm_cast
+          field_simp
+          grind
+    · rw [htop] at hw
+      exact absurd hw not_top_lt
+    · rw [hbot]
+      use Example_6_4_9.lowerseq (Example_6_4_9.m).toNat
+      constructor
+      · simp_all
+        use 0
+      · simp_all
+        have := example649_lowerseq_equivalent_def 0
+        rw [if_pos (by grind)] at this
+        norm_cast at this
+        rw [this]
+        exact bot_lt_coe _
 
 noncomputable abbrev Example_6_4_10 : Sequence := (fun (n:ℕ) ↦ (n+1:ℝ))
 
-example (n:ℕ) : Example_6_4_10.upperseq n = ⊤ := by sorry
+lemma example6410_upperseq_equivalent_def (n:ℕ) : Example_6_4_10.upperseq n = ⊤ := by
+  rw [Sequence.upperseq, Sequence.sup]
+  apply sSup_eq_top.mpr
+  intro b hb
+  obtain ⟨b', rfl⟩ | rfl | rfl := EReal.def b
+  · by_cases hb0 : b' < 0
+    · use Example_6_4_10.seq n
+      constructor
+      · use n
+        constructor <;> simp
+      · simp_all
+        norm_cast
+        grind
+    · push_neg at hb0
+      have hflrnonneg : ⌊b'⌋ ≥ 0 := by positivity
+      use (⌊b'⌋.toNat) + n + 1
+      constructor
+      · use (⌊b'⌋.toNat) + n
+        constructor
+        · grind
+        · simp_all
+          rw [if_pos (by grind)]
+          simp_all
+          norm_cast
+          grind
+      · have hint := Int.toNat_of_nonneg hflrnonneg
+        have hflr := Int.lt_floor_add_one b'
+        rify at hint
+        norm_cast
+        push_cast
+        rw [hint]
+        grind
+  · exfalso
+    exact lt_irrefl ⊤ hb
+  · use Example_6_4_10.seq n
+    constructor
+    · use n
+      constructor <;> simp
+    · exact bot_lt_coe _
 
+<<<<<<< HEAD
 example : Example_6_4_10.limsup = ⊤ := by sorry
 
 example (n:ℕ) : Example_6_4_10.lowerseq n = n+1 := by sorry
 
 example : Example_6_4_10.liminf = ⊤ := by sorry
+=======
+example : Example_6_4_10.limsup = ⊤ := by
+  unfold Sequence.limsup
+  apply sInf_eq_top.mpr
+  intro x hx
+  obtain ⟨N, hNam, hN⟩ := hx
+  simp at hNam
+  lift N to ℕ using (by omega)
+  rwa [example6410_upperseq_equivalent_def N] at hN
+
+lemma example6410_lowerseq_equivalent_def (n:ℕ) : Example_6_4_10.lowerseq n = n+1 := by
+  rw [Sequence.lowerseq, Sequence.inf]
+  apply csInf_eq_of_forall_ge_of_forall_gt_exists_lt
+  · use Example_6_4_10.seq n
+    grind
+  · intro a ha
+    obtain ⟨b', rfl⟩ | rfl | rfl := EReal.def a
+    · obtain ⟨N, hNam, hN⟩ := ha
+      simp at hNam hN
+      rw [if_pos hNam, if_pos (by grind)] at hN
+      norm_cast
+      rw [hN]
+      have : N ≥ 0 := by grind
+      have := Int.toNat_of_nonneg this
+      rify at this
+      rw [this]
+      rify at hNam
+      grind
+    · simp at ha
+    · simp at ha
+  · intro w hw
+    obtain ⟨b', rfl⟩ | rfl | rfl := EReal.def w
+    · use n + 1
+      constructor
+      · use n
+        constructor
+        · grind
+        · simp_all
+      · exact hw
+    · use n+1
+      constructor
+      · use n
+        constructor <;> simp_all
+      · exact coe_lt_top _
+    · exact absurd hw not_lt_bot
+
+example : Example_6_4_10.liminf = ⊤ := by
+  rw [Sequence.liminf]
+  apply sSup_eq_top.mpr
+  intro b hb
+  obtain ⟨b', rfl⟩ | rfl | rfl := EReal.def b
+  · by_cases hb0 : b' < 0
+    · use 1
+      constructor
+      · use 0
+        constructor
+        · simp
+        · have := example6410_lowerseq_equivalent_def 0; simp at this
+          symm at this
+          exact this
+      · norm_cast
+        linarith
+    · push_neg at hb0
+      have hflrnonneg : ⌊b'⌋ ≥ 0 := by positivity
+      have hint := Int.toNat_of_nonneg hflrnonneg
+      use ((⌊b'⌋.toNat + 1):ℕ)
+      constructor
+      · use ((⌊b'⌋.toNat):ℕ)
+        constructor
+        · grind
+        · have := example6410_lowerseq_equivalent_def (⌊b'⌋.toNat)
+          rw [this]
+          norm_cast
+      · norm_cast
+        push_cast
+        rify at hint
+        rw [hint]
+        exact Int.lt_floor_add_one b'
+  · exfalso
+    exact lt_irrefl ⊤ hb
+  · use 1
+    constructor
+    · use 0
+      constructor
+      · simp
+      · have := example6410_lowerseq_equivalent_def 0; simp at this
+        symm at this
+        exact this
+    · exact bot_lt_coe _
+
+>>>>>>> 440d3d1 (finally 6_4 is done)
 
 /-- Proposition 6.4.12(a) -/
 theorem Sequence.gt_limsup_bounds {a:Sequence} {x:EReal} (h: x > a.limsup) :
@@ -157,49 +586,235 @@ theorem Sequence.gt_limsup_bounds {a:Sequence} {x:EReal} (h: x > a.limsup) :
 /-- Proposition 6.4.12(a) -/
 theorem Sequence.lt_liminf_bounds {a:Sequence} {y:EReal} (h: y < a.liminf) :
     ∃ N ≥ a.m, ∀ n ≥ N, a n > y := by
-  sorry
+  simp only [Sequence.liminf, lt_sSup_iff] at h
+  obtain ⟨z, hz, ha⟩ := h
+  obtain ⟨N, hN, hNz⟩ := hz
+  rw [hNz] at ha; use N
+  simp [hN, Sequence.lowerseq] at ha ⊢; intro n _
+  have hn' : n ≥ (a.from N).m := by grind
+  have hinf := (a.from N).ge_inf hn'
+  convert lt_of_lt_of_le ha hinf using 1
+  grind
 
 /-- Proposition 6.4.12(b) -/
 theorem Sequence.lt_limsup_bounds {a:Sequence} {x:EReal} (h: x < a.limsup) {N:ℤ} (hN: N ≥ a.m) :
     ∃ n ≥ N, a n > x := by
   -- This proof is written to follow the structure of the original text.
-  have hx : x < a.upperseq N := by apply lt_of_lt_of_le h (sInf_le _); simp; use N
+  have hx : x < a.upperseq N := by
+    unfold upperseq
+    apply lt_of_lt_of_le h (sInf_le _)
+    simp
+    use N
   choose n hn hxn _ using exists_between_lt_sup hx
   grind
 
 /-- Proposition 6.4.12(b) -/
 theorem Sequence.gt_liminf_bounds {a:Sequence} {x:EReal} (h: x > a.liminf) {N:ℤ} (hN: N ≥ a.m) :
     ∃ n ≥ N, a n < x := by
-  sorry
+  have hx : x > a.lowerseq N := by
+    unfold lowerseq
+    apply lt_of_le_of_lt (le_sSup _) h
+    simp
+    use N
+  choose n hn hxn _ using exists_between_gt_inf hx
+  grind
 
 /-- Proposition 6.4.12(c) / Exercise 6.4.3 -/
-theorem Sequence.inf_le_liminf (a:Sequence) : a.inf ≤ a.liminf := by sorry
+theorem Sequence.inf_le_liminf (a:Sequence) : a.inf ≤ a.liminf := by
+  by_contra! h'
+  have hbd := Sequence.gt_liminf_bounds (N:=a.m) h' (by grind)
+  obtain ⟨N, hNam, hN⟩ := hbd
+  have hgeinf := Sequence.ge_inf hNam
+  grind
 
 /-- Proposition 6.4.12(c) / Exercise 6.4.3 -/
-theorem Sequence.liminf_le_limsup (a:Sequence) : a.liminf ≤ a.limsup := by sorry
+theorem Sequence.limsup_le_sup (a:Sequence) : a.limsup ≤ a.sup := by
+  by_contra! h'
+  have hbd := Sequence.lt_limsup_bounds (N:=a.m) h' (by grind)
+  obtain ⟨N, hNam, hN⟩ := hbd
+  have hlesup := Sequence.le_sup hNam
+  grind
 
 /-- Proposition 6.4.12(c) / Exercise 6.4.3 -/
-theorem Sequence.limsup_le_sup (a:Sequence) : a.limsup ≤ a.sup := by sorry
+theorem Sequence.liminf_le_limsup (a:Sequence) : a.liminf ≤ a.limsup := by
+  apply sSup_le
+  intro b hb; obtain ⟨N₁, hNam₁, hN₁⟩ := hb
+  apply le_sInf
+  intro c hc; obtain ⟨N₂, hNam₂, hN₂⟩ := hc
+  subst hN₁ hN₂
+  rw [Sequence.lowerseq, Sequence.upperseq]
+  have h₁ : max N₁ N₂ ≥ (a.from N₁).m := by grind
+  have h₂ : max N₁ N₂ ≥ (a.from N₂).m := by grind
+  have hgeinf := (a.from N₁).ge_inf h₁; rw [a.from_eval (by grind)] at hgeinf
+  have hlesup := (a.from N₂).le_sup h₂; rw [a.from_eval (by grind)] at hlesup
+  grind
 
 /-- Proposition 6.4.12(d) / Exercise 6.4.3 -/
+lemma Sequence.inf_ne_top {a:Sequence} : a.inf ≠ ⊤ := by
+  by_contra! h'
+  have hallbot := sInf_eq_top.mp h'
+  specialize hallbot (a.seq a.m) (by grind)
+  exact absurd hallbot (coe_ne_top _)
+
+lemma Sequence.sup_ne_bot {a:Sequence} : a.sup ≠ ⊥ := by
+  by_contra! h'
+  have halltop := sSup_eq_bot.mp h'
+  specialize halltop (a.seq a.m) (by grind)
+  exact absurd halltop (coe_ne_bot _)
+
+
 theorem Sequence.limit_point_between_liminf_limsup {a:Sequence} {c:ℝ} (h: a.LimitPoint c) :
   a.liminf ≤ c ∧ c ≤ a.limsup := by
-  sorry
+  rw [Sequence.limit_point_def] at h
+  constructor
+  · apply sSup_le
+    rintro _ ⟨N, hNam, rfl⟩
+    obtain ⟨x', hreal⟩ | htop | hbot := EReal.def (a.lowerseq N)
+    · rw [← hreal]
+      norm_cast
+      by_contra! hcont
+      obtain ⟨n, hngeN, hseqhalf⟩ := h ((x'-c)/2) (by grind) N hNam
+      rw [Sequence.lowerseq] at hreal
+      have hseqeq : a.seq n = (a.from N).seq n := by grind
+      rw [hseqeq] at hseqhalf
+      have hgeinf := Sequence.ge_inf (n:=n) (a:=(a.from N)) (by grind)
+      rw [← hreal] at hgeinf; norm_cast at hgeinf
+      rw [a.from_eval (by grind)] at *
+      grind
+    · exact absurd htop Sequence.inf_ne_top
+    · rw [hbot]; exact bot_le
+  · apply le_sInf
+    rintro _ ⟨N, hNam, rfl⟩
+    obtain ⟨x', hreal⟩ | htop | hbot := EReal.def (a.upperseq N)
+    · rw [← hreal]
+      norm_cast
+      by_contra! hcont
+      obtain ⟨n, hngeN, hseqhalf⟩ := h ((c-x')/2) (by grind) N hNam
+      rw [Sequence.upperseq] at hreal
+      have hseqeq : a.seq n = (a.from N).seq n := by grind
+      rw [hseqeq] at hseqhalf
+      have hlesup := Sequence.le_sup (n:=n) (a:=(a.from N)) (by grind)
+      rw [← hreal] at hlesup; norm_cast at hlesup
+      rw [a.from_eval (by grind)] at *
+      grind
+    · rw [htop]; exact le_top
+    · exact absurd hbot Sequence.sup_ne_bot
 
 /-- Proposition 6.4.12(e) / Exercise 6.4.3 -/
 theorem Sequence.limit_point_of_limsup {a:Sequence} {L_plus:ℝ} (h: a.limsup = L_plus) :
     a.LimitPoint L_plus := by
-  sorry
+  rw [Sequence.limit_point_def]
+  intro ε hε N hNam
+  have hub : L_plus < L_plus + ε := by linarith
+  have hlb : L_plus - ε < L_plus := by linarith
+  have hub' := EReal.coe_lt_coe hub
+  have hlb' := EReal.coe_lt_coe hlb
+  rw [← h] at hub' hlb'
+  obtain ⟨N₁, hNam₁, hN₁⟩ := Sequence.gt_limsup_bounds hub'
+  obtain ⟨N₂, hNam₂, hN₂⟩ := Sequence.lt_limsup_bounds (N:=max N N₁) hlb' (by grind)
+  specialize hN₁ N₂ (by grind)
+  use N₂
+  norm_cast at hN₁ hN₂
+  constructor <;> grind
 
 /-- Proposition 6.4.12(e) / Exercise 6.4.3 -/
 theorem Sequence.limit_point_of_liminf {a:Sequence} {L_minus:ℝ} (h: a.liminf = L_minus) :
     a.LimitPoint L_minus := by
-  sorry
+  rw [Sequence.limit_point_def]
+  intro ε hε N hNam
+  have hub : L_minus < L_minus + ε := by linarith
+  have hlb : L_minus - ε < L_minus := by linarith
+  have hub' := EReal.coe_lt_coe hub
+  have hlb' := EReal.coe_lt_coe hlb
+  rw [← h] at hub' hlb'
+  obtain ⟨N₁, hNam₁, hN₁⟩ := Sequence.lt_liminf_bounds hlb'
+  obtain ⟨N₂, hNam₂, hN₂⟩ := Sequence.gt_liminf_bounds (N:=max N N₁) hub' (by grind)
+  specialize hN₁ N₂ (by grind)
+  use N₂
+  norm_cast at hN₁ hN₂
+  constructor <;> grind
 
 /-- Proposition 6.4.12(f) / Exercise 6.4.3 -/
+lemma Sequence.limsup_of_bddBelow_ne_bot {a:Sequence} (h : a.BddBelow) : a.limsup ≠ ⊥:= by 
+  by_contra! h'
+  have hbot' := sInf_eq_bot.mp h'
+  obtain ⟨B, hB⟩ := h
+  specialize hbot' B (by exact bot_lt_coe _)
+  obtain ⟨x, hupper, hlt⟩ := hbot'
+  obtain ⟨N, hNam, haupper⟩ := hupper
+  rw [Sequence.upperseq] at haupper 
+  rw [haupper] at hlt 
+  have : (a.from N).seq N = a.seq N := by rw [a.from_eval (by grind)] 
+  specialize hB N hNam 
+  rw [← this] at hB
+  have hlesup := Sequence.le_sup (a:=(a.from N)) (n:=N) (by grind)
+  have := lt_of_le_of_lt hlesup hlt 
+  norm_cast at this 
+  linarith 
+
+lemma Sequence.liminf_of_bddAbove_ne_top {a:Sequence} (h : a.BddAbove) : a.liminf ≠ ⊤ := by 
+  by_contra! h' 
+  have htop' := sSup_eq_top.mp h' 
+  obtain ⟨A, hA⟩ := h 
+  specialize htop' A (by exact coe_lt_top _)
+  obtain ⟨x, hlower, hgt⟩ := htop' 
+  obtain ⟨N, hNam, halower⟩ := hlower 
+  rw [Sequence.lowerseq] at halower 
+  rw [halower] at hgt 
+  have : (a.from N).seq N = a.seq N := by rw [a.from_eval (by grind)]
+  specialize hA N hNam 
+  rw [← this] at hA 
+  have hgeinf := Sequence.ge_inf (a:=(a.from N)) (n:=N) (by grind)
+  have := lt_of_lt_of_le hgt hgeinf 
+  norm_cast at this 
+  linarith  
+
+lemma Sequence.limsup_of_bddAbove_ne_top {a:Sequence} (h: a.BddAbove) : a.limsup ≠ ⊤ := by 
+  by_contra! h' 
+  have htop := sInf_eq_top.mp h' 
+  specialize htop (a.upperseq a.m) (by grind)
+  have htop' := sSup_eq_top.mp htop 
+  obtain ⟨A, hA⟩ := h 
+  specialize htop' A (by exact coe_lt_top _)
+  obtain ⟨x, ⟨N, hNam, hN⟩, hlt⟩ := htop'
+  simp_all 
+  specialize hA N (by grind)
+  linarith 
+  
+lemma Sequence.liminf_of_bddBelow_ne_bot {a:Sequence} (h: a.BddBelow) : a.liminf ≠ ⊥ := by 
+  by_contra! h' 
+  have hbot := sSup_eq_bot.mp h' 
+  specialize hbot (a.lowerseq a.m) (by grind)
+  have hbot' := sInf_eq_bot.mp hbot 
+  obtain ⟨B, hB⟩ := h 
+  specialize hbot' B (by exact bot_lt_coe _)
+  obtain ⟨x, ⟨N, hNam, hN⟩, hgt⟩ := hbot'
+  simp_all 
+  specialize hB N (by grind)
+  linarith 
+
+
 theorem Sequence.tendsTo_iff_eq_limsup_liminf {a:Sequence} (c:ℝ) :
   a.TendsTo c ↔ a.liminf = c ∧ a.limsup = c := by
-  sorry
+  constructor
+  · intro htends
+    observe hconv : a.Convergent 
+    have ⟨habv, hblw⟩ := (Sequence.bounded_iff a).mp (Sequence.bounded_of_convergent hconv)
+    rw [Sequence.tendsTo_iff] at htends
+    constructor
+    · obtain ⟨x, hreal⟩ | htop | hbot := EReal.def a.liminf 
+      · rw [← hreal]
+        norm_cast 
+        -- have to do some real work here unfortundately
+        sorry
+      · exact absurd htop (Sequence.liminf_of_bddAbove_ne_top habv)
+      · exact absurd hbot (Sequence.liminf_of_bddBelow_ne_bot hblw)
+    · obtain ⟨x, hreal⟩ | htop | hbot := EReal.def a.limsup 
+      · sorry
+      · exact absurd htop (Sequence.limsup_of_bddAbove_ne_top habv) 
+      · exact absurd hbot (Sequence.limsup_of_bddBelow_ne_bot hblw) 
+  · 
+    sorry
 
 /-- Lemma 6.4.13 (Comparison principle) / Exercise 6.4.4 -/
 theorem Sequence.sup_mono {a b:Sequence} (hm: a.m = b.m) (hab: ∀ n ≥ a.m, a n ≤ b n) :
