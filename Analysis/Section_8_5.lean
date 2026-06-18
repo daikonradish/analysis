@@ -65,7 +65,8 @@ open Classical in
 
 @[implicit_reducible] noncomputable def LinearOrder.subtype {X:Type} [LinearOrder X] (A: Set X) : LinearOrder A :=
 LinearOrder.mk (by
-  sorry
+  intro a b
+  exact le_total a b
   )
 
 theorem IsTotal.subtype {X:Type} [PartialOrder X] {A: Set X} (hA: IsTotal X) : IsTotal A := by
@@ -77,7 +78,12 @@ theorem IsTotal.subset {X:Type} [PartialOrder X] {A B: Set X} (hA: IsTotal A) (h
   specialize hA ⟨ x, hAB hx ⟩ ⟨ y, hAB hy ⟩; simp_all
 
 abbrev X_8_5_4 : Set (Set ℕ) := { {1,2}, {2}, {2,3}, {2,3,4}, {5} }
-example : ¬ IsTotal X_8_5_4 := by sorry
+example : ¬ IsTotal X_8_5_4 := by
+  unfold IsTotal
+  push_neg
+  use ⟨{2}, by simp⟩
+  use ⟨{5}, by simp⟩
+  constructor <;> simp
 
 /-- Definition 8.5.5 (Maximal and minimal elements).  Here we use Mathlib's {name}`IsMax` and {name}`IsMin`. -/
 theorem IsMax.iff {X:Type} [PartialOrder X] (x:X) :
@@ -87,16 +93,73 @@ theorem IsMin.iff {X:Type} [PartialOrder X] (x:X) :
   IsMin x ↔ ¬ ∃ y, x > y := by rw [isMin_iff_forall_not_lt]; grind
 
 /-- Examples 8.5.6 -/
-example : IsMin (⟨ {2}, by aesop ⟩ : X_8_5_4) := by sorry
-example : IsMax (⟨ {1,2}, by aesop ⟩ : X_8_5_4) := by sorry
-example : IsMax (⟨ {2,3,4}, by aesop ⟩ : X_8_5_4) := by sorry
-example : IsMin (⟨ {5}, by aesop ⟩ : X_8_5_4) ∧ IsMax (⟨ {5}, by aesop ⟩ : X_8_5_4) := by sorry
-example : ¬ IsMin (⟨ {2,3}, by aesop ⟩ : X_8_5_4) ∧ ¬ IsMax (⟨ {2,3}, by aesop ⟩ : X_8_5_4) := by sorry
+example : IsMin (⟨ {2}, by aesop ⟩ : X_8_5_4) := by
+  rw [IsMin.iff]
+  push_neg
+  intro ⟨x, hx⟩ hgt
+  cases hx <;> simp_all <;> grind
+example : IsMax (⟨ {1,2}, by aesop ⟩ : X_8_5_4) := by
+  rw [IsMax.iff]
+  push_neg
+  intro ⟨x, hx⟩ hlt
+  cases hx <;> simp_all [Set.ssubset_def, Set.subset_def]
+  grind
+example : IsMax (⟨ {2,3,4}, by aesop ⟩ : X_8_5_4) := by
+  rw [IsMax.iff]
+  push_neg
+  intro ⟨x, hx⟩ hlt
+  cases hx <;> simp_all [Set.ssubset_def, Set.subset_def]
+  grind
+example : IsMin (⟨ {5}, by aesop ⟩ : X_8_5_4) ∧ IsMax (⟨ {5}, by aesop ⟩ : X_8_5_4) := by
+  rw [IsMin.iff, IsMax.iff]
+  constructor
+  · push_neg
+    intro ⟨x, hx⟩ hgt
+    simp_all
+    cases hx <;> grind
+  · push_neg
+    intro ⟨x, hx⟩ hlt
+    simp_all
+    cases hx <;> grind
+
+
+example : ¬ IsMin (⟨ {2,3}, by aesop ⟩ : X_8_5_4) ∧ ¬ IsMax (⟨ {2,3}, by aesop ⟩ : X_8_5_4) := by
+  constructor
+  · rw [IsMin.iff]
+    push_neg
+    use ⟨{2}, by simp⟩
+    simp
+    constructor <;> simp
+  · rw [IsMax.iff]
+    push_neg
+    use ⟨{2, 3, 4}, by simp⟩
+    simp
+    constructor <;> simp
 
 /-- Example 8.5.7 -/
-example : IsMin (0:ℕ) := by sorry
-example (n:ℕ) : ¬ IsMax n := by sorry
-example (n:ℤ): ¬ IsMin n ∧ ¬ IsMax n := by sorry
+example : IsMin (0:ℕ) := by
+  rw [IsMin.iff]
+  push_neg
+  intro y
+  simp
+example (n:ℕ) : ¬ IsMax n := by
+  rw [IsMax.iff]
+  push_neg
+  by_contra! h
+  specialize h (n+1)
+  simp at h
+example (n:ℤ): ¬ IsMin n ∧ ¬ IsMax n := by
+  constructor
+  · rw [IsMin.iff]
+    push_neg
+    by_contra! h
+    specialize h (n - 1)
+    simp at h
+  · rw [IsMax.iff]
+    push_neg
+    by_contra! h
+    specialize h (n + 1)
+    simp at h
 
 /-- Definition 8.5.8.  We use `[LinearOrder X] [WellFoundedLT X]` to describe well-ordered sets. -/
 theorem WellFoundedLT.iff (X:Type) [LinearOrder X] :
@@ -119,19 +182,132 @@ example : WellFoundedLT ℕ := by
   simp [IsMin]; grind [Nat.min_spec]
 
 /-- Exercise 8.1.2 -/
-example : ¬ WellFoundedLT ℤ := by sorry
-example : ¬ WellFoundedLT ℚ := by sorry
-example : ¬ WellFoundedLT ℝ := by sorry
+example : ¬ WellFoundedLT ℤ := by
+  rw [WellFoundedLT.iff]
+  push_neg
+  use Set.univ
+  simp
+  intro a; use a - 1; simp
+
+example : ¬ WellFoundedLT ℚ := by
+  rw [WellFoundedLT.iff]
+  push_neg
+  use Set.univ
+  simp
+  intro a; use a - 1; simp
+
+example : ¬ WellFoundedLT ℝ := by
+  rw [WellFoundedLT.iff]
+  push_neg
+  use Set.univ
+  simp
+  intro a; use a - 1; simp
 
 /-- Exercise 8.5.8 -/
-theorem IsMax.ofFinite {X:Type} [LinearOrder X] [Finite X] [Nonempty X] : ∃ x:X, IsMax x := by sorry
+lemma Finset.has_max {X : Type} [LinearOrder X] (s : Finset X) (hs : s.Nonempty) :
+    ∃ x ∈ s, ∀ y ∈ s, y ≤ x := by
+  induction s using Finset.induction_on with
+  | empty => exact absurd hs (by simp)
+  | insert x S ha ih =>
+      by_cases hne : S.Nonempty
+      · choose m hmS hmmax using ih hne
+        by_cases hxm : x ≤ m
+        · use m
+          constructor
+          · simp; right; exact hmS
+          · intro y hy
+            rw [Finset.mem_insert] at hy
+            rcases hy with rfl | hs
+            · exact hxm
+            · exact hmmax y hs
+        · push_neg at hxm
+          use x
+          constructor
+          · simp
+          · intro y hy
+            rw [Finset.mem_insert] at hy
+            rcases hy with rfl | hs
+            · simp
+            · specialize hmmax y hs
+              grind
+      · push_neg at hne
+        use x
+        simp
+        grind
 
-theorem IsMin.ofFinite {X:Type} [LinearOrder X] [Finite X] [Nonempty X] : ∃ x:X, IsMin x := by sorry
+theorem IsMax.ofFinite {X:Type} [LinearOrder X] [Finite X] [Nonempty X] : ∃ x:X, IsMax x := by
+  haveI : Fintype X := Fintype.ofFinite X
+  have hne : (Finset.univ : Finset X).Nonempty := Finset.univ_nonempty
+  obtain ⟨x, _, hx⟩ := Finset.has_max (Finset.univ : Finset X) hne
+  use x
+  rw [IsMax.iff]
+  push_neg
+  intro y
+  exact hx y (by simp)
+
+lemma Finset.has_min {X : Type} [LinearOrder X] (s : Finset X) (hs : s.Nonempty) :
+    ∃ x ∈ s, ∀ y ∈ s, x ≤ y := by
+  induction s using Finset.induction_on with
+  | empty => exact absurd hs (by simp)
+  | insert x S ha ih =>
+      by_cases hne : S.Nonempty
+      · choose m hmS hmmax using ih hne
+        by_cases hxm : m ≤ x
+        · use m
+          constructor
+          · simp; right; exact hmS
+          · intro y hy
+            rw [Finset.mem_insert] at hy
+            rcases hy with rfl | hs
+            · exact hxm
+            · exact hmmax y hs
+        · push_neg at hxm
+          use x
+          constructor
+          · simp
+          · intro y hy
+            rw [Finset.mem_insert] at hy
+            rcases hy with rfl | hs
+            · simp
+            · specialize hmmax y hs
+              grind
+      · push_neg at hne
+        use x
+        simp
+        grind
+
+theorem IsMin.ofFinite {X:Type} [LinearOrder X] [Finite X] [Nonempty X] : ∃ x:X, IsMin x := by
+  haveI : Fintype X := Fintype.ofFinite X
+  have hne : (Finset.univ : Finset X).Nonempty := Finset.univ_nonempty
+  obtain ⟨x, _, hx⟩ := Finset.has_min (Finset.univ : Finset X) hne
+  use x
+  rw [IsMin.iff]
+  push_neg
+  intro y
+  exact hx y (by simp)
+
 
 /-- Exercise 8.5.8 -/
-theorem WellFoundedLT.ofFinite {X:Type} [LinearOrder X] [Finite X] : WellFoundedLT X := by sorry
+theorem WellFoundedLT.ofFinite {X:Type} [LinearOrder X] [Finite X] : WellFoundedLT X := by
+  rw [WellFoundedLT.iff]
+  intro A hA
+  have : Nonempty A := by exact Set.Nonempty.to_subtype hA
+  apply IsMin.ofFinite
 
-example {X:Type} [LinearOrder X] [WellFoundedLT X] (A: Set X) : WellFoundedLT A := by sorry
+
+example {X:Type} [LinearOrder X] [WellFoundedLT X] (A: Set X) : WellFoundedLT A := by
+  rw [WellFoundedLT.iff]
+  intro B hB
+  -- apply WellFounded to the image of B in X
+  have hwf := (WellFoundedLT.iff X).mp ‹_› (Subtype.val '' B) (by aesop)
+  obtain ⟨⟨x, hxB⟩, hmin⟩ := hwf
+  simp at hxB
+  obtain ⟨hxA, hxB'⟩ := hxB
+  use ⟨⟨x, hxA⟩, hxB'⟩
+  -- show it is minimal
+  intro ⟨⟨y, hyA⟩, hyB⟩ hle
+  apply hmin (b := ⟨y, (by simp; exact ⟨hyA, hyB⟩)⟩) hle
+
 
 theorem WellFoundedLT.subset {X:Type} [PartialOrder X] {A B: Set X} (hA: IsTotal A) [hwell: WellFoundedLT A] (hAB: B ⊆ A) : WellFoundedLT B := by
   set hAlin : LinearOrder A := LinearOrder.mk hA
@@ -146,7 +322,49 @@ theorem WellFoundedLT.subset {X:Type} [PartialOrder X] {A B: Set X} (hA: IsTotal
 /-- Proposition 8.5.10 / Exercise 8.5.10 -/
 theorem WellFoundedLT.strong_induction {X:Type} [LinearOrder X] [WellFoundedLT X] {P:X → Prop}
   (h: ∀ n, (∀ m < n, P m) → P n) : ∀ n, P n := by
-  sorry
+  intro n
+  let Y := {m : X | ∃ k ≤ m, ¬(P k)}
+  suffices hempty : Y = ∅ by
+    unfold Y at hempty
+    by_contra! hnotP
+    contrapose hempty
+    push_neg
+    use n
+    simp
+    use n
+  by_contra! hnonempty
+  have hhasmin := (WellFoundedLT.iff X).mp (inferInstance)
+  choose kmin hmin using hhasmin _ hnonempty
+  choose k₀ hle hnotPk₀ using kmin.property
+  rcases hle.eq_or_lt with heq | hlt
+  · have hall : ∀ j < kmin.val, P j := by
+      intro j hj
+      by_contra hPj
+      have hjY : j ∈ Y := by
+        unfold Y
+        simp
+        use j
+      contrapose hmin
+      unfold IsMin; push_neg
+      use ⟨j, hjY⟩
+      constructor
+      · exact le_of_lt hj
+      · exact hj
+    have := h kmin hall
+    rw [heq] at hnotPk₀
+    exact absurd this hnotPk₀
+  · have hin : k₀ ∈ Y := by
+      unfold Y
+      simp
+      use k₀
+    have hnotmin : ¬ (IsMin kmin) := by
+      unfold IsMin
+      push_neg
+      use ⟨k₀, by exact hin⟩
+      constructor
+      · exact hle
+      · exact hlt
+    exact absurd hmin hnotmin
 
 /-- Definition 8.5.12 (Upper bounds and strict upper bounds) -/
 abbrev IsUpperBound {X:Type} [PartialOrder X] (A:Set X) (x:X) : Prop :=
@@ -160,17 +378,43 @@ abbrev IsStrictUpperBound {X:Type} [PartialOrder X] (A:Set X) (x:X) : Prop :=
   IsUpperBound A x ∧ x ∉ A
 
 theorem IsStrictUpperBound.iff {X:Type} [PartialOrder X] (A:Set X) (x:X) :
-  IsStrictUpperBound A x ↔ ∀ y ∈ A, y < x := by sorry
+  IsStrictUpperBound A x ↔ ∀ y ∈ A, y < x := by
+  unfold IsStrictUpperBound IsUpperBound
+  constructor
+  · intro ⟨hupper, hnotA⟩ y hA
+    specialize hupper y hA
+    rcases hupper.lt_or_eq with hlt | heq
+    · exact hlt
+    · rw [heq] at hA
+      exact absurd hA hnotA
+  · intro hltx
+    constructor
+    · intro a hA
+      specialize hltx a hA
+      exact le_of_lt hltx
+    · by_contra hin
+      specialize hltx x hin
+      exact (lt_self_iff_false x).mp hltx
 
 theorem IsStrictUpperBound.iff' {X:Type} [PartialOrder X] (A:Set X) (x:X) :
   IsStrictUpperBound A x ↔ x ∈ upperBounds A \ A := by
   simp [IsStrictUpperBound, IsUpperBound.iff]
 
-example : IsUpperBound (.Icc 1 2: Set ℝ) 2 := by sorry
+example : IsUpperBound (.Icc 1 2: Set ℝ) 2 := by
+  intro h hy
+  simp at hy
+  exact hy.2
 
-example : ¬ IsStrictUpperBound (.Icc 1 2: Set ℝ) 2 := by sorry
+example : ¬ IsStrictUpperBound (.Icc 1 2: Set ℝ) 2 := by
+  unfold IsStrictUpperBound
+  push_neg
+  intro x
+  simp
 
-example : IsStrictUpperBound (.Icc 1 2: Set ℝ) 3 := by sorry
+example : IsStrictUpperBound (.Icc 1 2: Set ℝ) 3 := by
+  constructor
+  · intro y hy; simp at hy; linarith
+  · simp; norm_num
 
 /-- A convenient way to simplify the notion of having {name}`x₀` as a minimal element.-/
 theorem IsMin.iff_lowerbound {X:Type} [PartialOrder X] {Y: Set X} (hY: IsTotal Y) (x₀ : X) : (∃ hx₀ : x₀ ∈ Y, IsMin (⟨ x₀, hx₀ ⟩:Y)) ↔ x₀ ∈ Y ∧ ∀ x ∈ Y, x₀ ≤ x := by
@@ -228,11 +472,85 @@ theorem WellFoundedLT.partialOrder {X:Type} [PartialOrder X] (x₀ : X) : ∃ Y 
   -- The set `Ω` captures the notion of a `good set`.
   set Ω := { Y : Ω₀ | ∀ x ∈ (Y:Set X) \ {x₀}, x = s (F Y x) }
   have hΩ : pt ∈ Ω := by
-    sorry
+    unfold Ω
+    simp
+    intro x hx hnot
+    unfold pt at hx
+    simp at hx
+    contradiction
 
   -- Exercise 8.5.13
   have ex_8_5_13 {Y Y':Ω} (x:X) (h: x ∈ (Y':Set X) \ Y) : IsStrictUpperBound Y x := by
+    /-  have hdiff (Y : Ω) (Y' : Ω) (d : X) (hY : d ∈ (Y:Set X)) (hY' : d ∉ (Y':Set X))
+      (hd : d ≠ x₀) (hagree : ∀ c, c < d → (c ∈ (Y:Set X) ↔ c ∈ (Y':Set X))) :
+      IsStrictUpperBound (Y': Set X) d := by
+      choose hYtotal hYwell hYx₀ hYmin using Y.val.property
+      choose hY'total hY'well hY'x₀ hY'min using Y'.val.property
+      rw [IsStrictUpperBound.iff]
+      intro y hy
+      by_contra h'
+      have hdYx₀ : d ∈ (Y:Set X) \ {x₀} := by
+        constructor
+        · exact hY
+        · simp; exact hd
+      have hdFY : d = s (F Y.val d) := by
+        apply Y.property
+        exact hdYx₀
+      have hpredecessor : F Y.val d = {c ∈ (Y:Set X) | c < d} := by
+        have := hF hdYx₀
+        exact this
+      have hchain : {c ∈ (Y:Set X) | c < d} = {c ∈ (Y':Set X) | c < d} := by
+        ext c
+        simp
+        intro hc
+        specialize hagree c hc
+        exact hagree
+      set _Y'lin := LinearOrder.mk hY'total
+      set Z : Set (Y':Set X) := { q | d ≤ q.val }
+      have hZnonempty : Z.Nonempty := by
+
+        use ⟨y, hy⟩
+        unfold Z; simp
+        sorry
+      -/
+
+
+
+    have hinter (Y : Ω) (Y' : Ω) : (Y : Set X) ∩ Y' ∈ Ω₀ := by
+      choose hYtotal hYwell hYx₀ hYmin using Y.val.property
+      choose hY'total hY'well hY'x₀ hY'min using Y'.val.property
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · intro ⟨a, haY, haY'⟩ ⟨b, hbY, hbY'⟩
+        simp
+        exact hYtotal ⟨a, haY⟩ ⟨b, hbY⟩
+      · haveI : WellFoundedLT (Y : Set X) := hYwell
+        apply WellFoundedLT.subset (A := (Y : Set X)) (B := _)
+        · exact hYtotal
+        · intro y hy; simp at hy; tauto
+      · tauto
+      · intro y hy
+        simp at hy
+        specialize hYmin y hy.1
+        exact hYmin
+
+
+    have hY := Y.val.property
+    have hY' := Y'.val.property
+    have hYΩ := Y.property
+    have hY'Ω := Y'.property
+    choose hYtotal hYwell hYx₀ hYmin using hY
+    choose hY'total hY'well hY'x₀ hY'min using hY'
+    set Y'' : Set X := (Y:Set X) ∩ Y'
+    have hY'' : Y'' ∈ Ω₀ := by
+      unfold Y'' Ω₀
+      refine ⟨?_, ?_, ?_, ?_⟩
+      ·
+        sorry
+      · sorry
+      · sorry
+      · sorry
     sorry
+
 
   have : IsTotal Ω := by
     unfold IsTotal; by_contra!; obtain ⟨ ⟨ ⟨ Y, hY1 ⟩, hY2 ⟩, ⟨ ⟨ Y', hY'1⟩, hY'2 ⟩, h1, h2 ⟩ := this
@@ -309,32 +627,144 @@ theorem WellFoundedLT.partialOrder {X:Type} [PartialOrder X] (x₀ : X) : ∃ Y 
 /-- Lemma 8.5.15 (Zorn's lemma) / Exercise 8.5.14 -/
 theorem Zorns_lemma {X:Type} [PartialOrder X] [Nonempty X]
   (hchain: ∀ Y:Set X, IsTotal Y ∧ Y.Nonempty → ∃ x, IsUpperBound Y x) : ∃ x:X, IsMax x := by
-  sorry
+  by_contra! h'
+  have hstrict (A : Set X) (hex : ∃ x, IsUpperBound A x) :  ∃ x, IsStrictUpperBound A x := by
+    choose B hB using hex
+    have hnotmax := h' B; simp at hnotmax
+    choose b hb using hnotmax
+    use b
+    rw [IsUpperBound.iff] at hB
+    rw [IsStrictUpperBound.iff]
+    intro a ha
+    have := hB ha
+    exact lt_of_le_of_lt (hB ha) hb
+  obtain ⟨x₀⟩ :=  ‹Nonempty X›
+  choose Y hYtotal hYwell hmin hnonstrict using WellFoundedLT.partialOrder x₀
+  have hYx₀ : x₀ ∈ Y := by exact hmin.choose
+  have hYnonempty : Y.Nonempty := by use x₀
+  have h₁ := hchain Y ⟨hYtotal, hYnonempty⟩
+  have h₂ := hstrict Y h₁
+  exact hnonstrict h₂
 
 /-- Exercise 8.5.1 -/
 def empty_set_partial_order [h₀: LE Empty] : Decidable (∃ h : PartialOrder Empty, h.le = h₀.le) := by
-  sorry
+  apply isTrue
+  use {
+    le               := fun x _ => True
+    le_refl          := by
+      intro x; simp
+    le_antisymm      := by
+      intro x y; tauto
+    le_trans         := by
+      intro a b c; tauto
+    lt_iff_le_not_ge := by
+      intro a b; simp
+  }
+  ext x y
+  simp
+  grind
 
 def empty_set_linear_order [h₀: LE Empty] : Decidable (∃ h : LinearOrder Empty, h.le = h₀.le) := by
-  sorry
+  apply isTrue
+  use {
+    le               := fun x _ => True
+    le_refl          := by
+      intro x; simp
+    le_antisymm      := by
+      intro x y; tauto
+    le_trans         := by
+      intro a b c; tauto
+    lt_iff_le_not_ge := by
+      intro a b; simp
+    le_total := by
+      intro a b; tauto
+    min_def := by simp
+    max_def := by simp
+    toDecidableLE := by
+      intro x y
+      simp; tauto
+  }
+  ext x y
+  simp
+  grind
 
 def empty_set_well_order [h₀: LT Empty]: Decidable (Nonempty (WellFoundedLT Empty)) := by
-  sorry
+  exact isTrue ⟨⟨⟨fun a ↦ a.elim⟩⟩⟩
+
+
 
 /-- Exercise 8.5.2 -/
-example : ∃ (X:Type) (h₀: LE X), (∀ x:X, x ≤ x) ∧ (∀ x y:X, x ≤ y → y ≤ x → x = y) ∧ ¬ (∀ x y z:X, x ≤ y → y ≤ z → x ≤ z) := by sorry
+example : ∃ (X:Type) (h₀: LE X), (∀ x:X, x ≤ x) ∧ (∀ x y:X, x ≤ y → y ≤ x → x = y) ∧ ¬ (∀ x y z:X, x ≤ y → y ≤ z → x ≤ z) := by
+  use Fin 3
+  use ⟨fun a b => a = b ∨ (a = 0 ∧ b = 1) ∨ (a = 1 ∧ b = 2)⟩
+  refine ⟨?_, ?_, ?_⟩
+  · intro x
+    simp
+  · intro x y hxy hyx
+    grind
+  · push_neg
+    use 0
+    use 1
+    use 2
+    simp
 
-example : ∃ (X:Type) (h₀: LE X), (∀ x:X, x ≤ x) ∧ (∀ x y z:X, x ≤ y → y ≤ z → x ≤ z) ∧ ¬ (∀ x y:X, x ≤ y → y ≤ x → x = y) := by sorry
+example : ∃ (X:Type) (h₀: LE X), (∀ x:X, x ≤ x) ∧ (∀ x y z:X, x ≤ y → y ≤ z → x ≤ z) ∧ ¬ (∀ x y:X, x ≤ y → y ≤ x → x = y) := by
+  use Fin 2
+  use ⟨fun _ _ => True⟩
+  refine ⟨?_, ?_, ?_⟩
+  · intro x; simp
+  · intro x y z hxy hyz; simp
+  · push_neg
+    use 0
+    use 1
+    simp
 
-example : ∃ (X:Type) (h₀: LE X), (∀ x y:X, x ≤ y → y ≤ x → x = y) ∧ (∀ x y z:X, x ≤ y → y ≤ z → x ≤ z) ∧ ¬ (∀ x:X, x ≤ x) := by sorry
+
+example : ∃ (X:Type) (h₀: LE X), (∀ x y:X, x ≤ y → y ≤ x → x = y) ∧ (∀ x y z:X, x ≤ y → y ≤ z → x ≤ z) ∧ ¬ (∀ x:X, x ≤ x) := by
+  use Fin 2
+  use ⟨fun a b => a < b⟩
+  refine ⟨?_, ?_, ?_⟩
+  · intro x y hxy hyx
+    grind
+  · intro x y z hxy hyz; simp
+    grind
+  · push_neg
+    use 0
+    simp
 
 /-- Exercise 8.5.3: The divisibility ordering on PNat. -/
 @[reducible] def PNat.divOrder : PartialOrder PNat where
   le x y := ∃ n : PNat, y = n * x
   lt x y := (∃ n : PNat, y = n * x) ∧ ¬∃ n : PNat, x = n * y
-  le_refl := by sorry
-  le_antisymm := by sorry
-  le_trans := by sorry
+  le_refl := by
+    intro a
+    use 1; simp
+  le_antisymm := by
+    intro a b ha hb
+    choose n₁ hn₁ using ha
+    choose n₂ hn₂ using hb
+    have hn : n₁ * n₂ = 1 := by
+      have h : (n₂ * n₁) * a = 1 * a := by
+        rw [mul_assoc, ← hn₁, one_mul]
+        exact hn₂.symm
+      have := mul_right_cancel h
+      rw [mul_comm]
+      exact this
+    have hn1 : n₁ = 1 := by
+      have := congrArg PNat.val hn
+      simp at this
+      exact this.1
+    have hn2 : n₂ = 1 := by
+      have := congrArg PNat.val hn
+      simp at this
+      exact this.2
+    grind
+  le_trans := by
+    intro a b c hab hbc
+    choose n₁ hn₁ using hab
+    choose n₂ hn₂ using hbc
+    use n₁ * n₂
+    grind
   lt_iff_le_not_ge := fun _ _ ↦ Iff.rfl
 
 theorem PNat.divOrder_exists :
@@ -343,29 +773,119 @@ theorem PNat.divOrder_exists :
 
 theorem PNat.divOrder_not_linear :
     ¬∃ (h₀ : LinearOrder PNat), h₀.le = (fun x y ↦ ∃ n, y = n * x) := by
-  sorry
+  intro ⟨h₀, h⟩
+  have htot := h₀.le_total 2 3
+  rw [h] at htot; simp at htot
+  rcases htot with ⟨n, hn⟩ | ⟨n, hn⟩
+  · have := congrArg PNat.val hn
+    simp at this
+    omega
+  · have := congrArg PNat.val hn
+    simp at this
+    omega
+
 
 /-- Exercise 8.5.4 -/
-example : ¬ ∃ x : {x:ℝ| x > 0}, IsMin x := by sorry
+example : ¬ ∃ x : {x:ℝ| x > 0}, IsMin x := by
+  push_neg
+  intro x hx
+  rw [IsMin.iff] at hx; push_neg at hx
+  specialize hx ⟨x.val / 2, by simp; exact x.property⟩
+  simp at hx
+  change x.val ≤ x.val / 2 at hx
+  have hxpos : x.val > 0 := by exact x.property
+  linarith
+
 
 /-- Exercise 8.5.5 -/
-example {X Y:Type} [PartialOrder Y] (f:X → Y) : ∃ h₀: PartialOrder X, h₀.le = (fun x y ↦ f x < f y ∨ x = y) := by sorry
+example {X Y:Type} [PartialOrder Y] (f:X → Y) : ∃ h₀: PartialOrder X, h₀.le = (fun x y ↦ f x < f y ∨ x = y) := by
+  use {
+    le := fun x y ↦ f x < f y ∨ x = y,
+    le_refl := by
+      intro x; right; rfl
+    le_antisymm := by
+      intro a b ha hb
+      cases ha <;> cases hb <;> grind
+    le_trans := by
+      intro a b c hab hbc
+      cases hab <;> cases hbc <;> grind
+  }
+  rfl
 
 def Ex_8_5_5_b : Decidable (∀ (X Y:Type) (h: LinearOrder Y) (f:X → Y), ∃ h₀: LinearOrder X, h₀.le = (fun x y ↦ f x < f y ∨ x = y)) := by
-  sorry
+  apply isFalse
+  push_neg
+  use Fin 2
+  use Fin 1
+  use inferInstance
+  use fun _ => 0
+  intro h₀ h
+  have heq : ∀ x y : Fin 2, h₀.le x y ↔ x = y := by
+    intro x y; grind
+  have := h₀.le_total (0: Fin 2) 1
+  cases this <;> simp_all
+
 
 -- Final part of Exercise 8.5.5; if the answer to the previous part is "no", modify the hypotheses to make it true.
+theorem Ex_8_5_5_b' (X Y:Type) (h: LinearOrder Y) (f:X → Y) (hf: Function.Injective f): -- need f to be injective.
+    ∃ h₀: LinearOrder X, h₀.le = (fun x y ↦ f x < f y ∨ x = y) := by
+  use {
+    le := (fun x y ↦ f x < f y ∨ x = y)
+    le_refl := by simp
+    le_antisymm := by
+      intro a b hab hba
+      rcases hab with hfab | heab <;> rcases hba with hfba | heba
+      · exact absurd hfab (by exact Std.not_gt_of_lt hfba)
+      · exact heba.symm
+      · exact heab
+      · exact heab
+    le_trans := by
+      intro a b c hab hbc
+      rcases hab with hfab | heab <;> rcases hbc with hfbc | hebc
+      · left; exact Std.lt_trans hfab hfbc
+      · left; rwa [hebc] at hfab
+      · left; rwa [← heab] at hfbc
+      · right; rwa [hebc] at heab
+    le_total := by
+      by_contra! h'
+      choose a b hab hab' using h'
+      have hefab : f a = f b := by
+        apply le_antisymm
+        · exact hab'.1
+        · exact hab.1
+      exact hab.2 (hf hefab)
+    toDecidableLE := by
+      intro x y
+      simp
+      exact Classical.propDecidable (f x < f y ∨ x = y)
+  }
+  rfl
 
 /-- Exercise 8.5.6 -/
 abbrev OrderIdeals (X: Type) [PartialOrder X] : Set (Set X) := .Iic '' (.univ : Set X)
 
-def OrderIdeals.iso {X: Type} [PartialOrder X] : X ≃o OrderIdeals X := {
-  toFun x := ⟨ .Iic x, by simp ⟩
-  invFun := by sorry
-  left_inv := by sorry
-  right_inv := by sorry
-  map_rel_iff' := by sorry
+noncomputable def OrderIdeals.iso {X: Type} [PartialOrder X] : X ≃o OrderIdeals X := {
+  toFun x  := ⟨ .Iic x, by simp ⟩
+  invFun x := Classical.choose x.2
+  left_inv := by
+    intro x
+    have h := Classical.choose_spec (⟨.Iic x, by simp⟩ : OrderIdeals X).2
+    apply Set.Iic_injective
+    exact h.2
+  right_inv := by
+    intro ⟨S, hS⟩
+    ext y
+    simp
+    constructor
+    · intro hy
+      grind
+    · intro hy
+      grind
+  map_rel_iff' := by
+    intro a b
+    simp
   }
+
 
 /-- Exercise 8.5.7 -/
 example {Y:Type} [LinearOrder Y] {x y:Y} (hx: IsMin x) (hy: IsMin y) : x = y := by
