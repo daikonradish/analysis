@@ -976,6 +976,115 @@ theorem R_unbounded : ¬ Bornology.IsBounded (.univ: Set ℝ) := by
   simp at himpossible
   linarith
 
+
+
+open Classical in
+noncomputable def lr (a : ℕ → ℝ) (M : ℝ) : ℕ → ℝ × ℝ
+  | 0 => (-M, M)
+  | k + 1 =>
+    let p := lr a M k
+    let m := (p.1 + p.2) / 2
+    if (∃ᶠ n in Filter.atTop, a n ∈ Set.Icc p.1 m) then (p.1, m) else (m, p.2)
+
+lemma lr_l_le_r (a : ℕ → ℝ) (M : ℝ) (n : ℕ) (hMPos : M > 0) :
+  (lr a M n).1 ≤ (lr a M n).2 := by
+  induction' n with k ih
+  . unfold lr; simp; linarith
+  . unfold lr; simp
+    split_ifs with h
+    . simp; linarith
+    . simp; linarith
+
+lemma lr_width (a : ℕ → ℝ) (M : ℝ) (n : ℕ) : (lr a M n).2 - (lr a M n).1 = 2 * M / 2^n := by
+  induction' n with k ih
+  . unfold lr; simp; linarith
+  . unfold lr; simp
+    set l := (lr a M k).1
+    set r := (lr a M k).2
+    split_ifs with h
+    . simp
+      conv_lhs => rw [show (l + r) / 2 - l = (r - l) / 2 by field_simp; ring_nf]
+      conv_rhs =>
+        rw [pow_add]; simp
+        rw [show 2 * M / (2 ^ k * 2) = M / (2 ^ k) by field_simp]
+      field_simp at ih ⊢; exact ih
+    . simp
+      conv_lhs => rw [show r - (l + r) / 2 = (r - l) / 2 by field_simp; ring_nf]
+      conv_rhs =>
+        rw [pow_add]; simp
+        rw [show 2 * M / (2 ^ k * 2) = M / (2 ^ k) by field_simp]
+      field_simp at ih ⊢; exact ih
+
+lemma lr_bisect (a : ℕ → ℝ) {l r: ℝ} (h : ∃ᶠ n in Filter.atTop, a n ∈ Set.Icc l r) :
+  (∃ᶠ n in Filter.atTop, a n ∈ Set.Icc l ((l+r)/2))  ∨  (∃ᶠ n in Filter.atTop, a n ∈ Set.Icc ((l+r)/2) r) := by
+  rw [← Filter.frequently_or_distrib]
+  apply h.mono
+  intro n hn
+  by_cases! han : a n ≤ ((l + r) / 2)
+  . left; simp at hn han ⊢; constructor <;> linarith
+  . right; simp at hn han ⊢; constructor <;> linarith
+
+lemma lr_freq (a : ℕ → ℝ) (M : ℝ) (h0 : ∃ᶠ n in Filter.atTop, a n ∈ Set.Icc (-M) M) (n : ℕ) :
+  ∃ᶠ k in Filter.atTop, a k ∈ Set.Icc (lr a M n).1 (lr a M n).2 := by
+  induction' n with k ih
+  . simp_rw [
+      show (lr a M 0).1 = -M by rfl,
+      show (lr a M 0).2 = M by rfl
+    ]
+    exact h0
+  . unfold lr
+    replace ih := lr_bisect a ih
+    simp only [] at *
+    split_ifs with h
+    . simp; tauto
+    . simp; tauto
+
+lemma lr_nest (a : ℕ → ℝ) (M : ℝ) (hMpos : M > 0) (n : ℕ) :
+    (lr a M n).1 ≤ (lr a M (n+1)).1 ∧ (lr a M (n+1)).2 ≤ (lr a M n).2 := by
+  have hle := lr_l_le_r a M n hMpos
+  match n with
+  | 0     =>
+    unfold lr
+    simp
+    rw [
+      show (lr a M 0).1 = -M by rfl,
+      show (lr a M 0).2 = M by rfl
+    ]
+    constructor
+    . split_ifs with h
+      . simp
+      . simp; linarith
+    . split_ifs with h
+      . simp; linarith
+      . simp
+  | k + 1 =>
+    have hle' := lr_l_le_r a M k hMpos
+    conv_rhs => unfold lr
+    simp [-Set.mem_Icc]
+    split_ifs with h1 h2 h3 <;> constructor <;> simp only [] at *
+    . conv_rhs => unfold lr
+      simp [-Set.mem_Icc, h1]
+    . field_simp
+      conv_lhs => unfold lr
+      simp [-Set.mem_Icc, h2]
+      linarith
+    . conv_rhs => unfold lr
+      simp [-Set.mem_Icc, h1]
+    . conv_lhs => unfold lr
+      simp [-Set.mem_Icc, h2]
+      linarith
+    . conv_rhs => unfold lr
+      simp [-Set.mem_Icc, h1]
+      linarith
+    . conv_lhs => unfold lr
+      simp [-Set.mem_Icc, h3]
+    · conv_rhs => unfold lr
+      simp [-Set.mem_Icc, h1]
+      linarith
+    . conv_lhs => unfold lr
+      simp [-Set.mem_Icc, h3]
+
+
 /-- Theorem 9.1.24 / Exercise 9.1.13 (Heine-Borel theorem for the line)-/
 theorem Heine_Borel (X: Set ℝ) :
   IsClosed X ∧ Bornology.IsBounded X ↔ ∀ a : ℕ → ℝ, (∀ n, a n ∈ X) →
@@ -989,6 +1098,8 @@ theorem Heine_Borel (X: Set ℝ) :
       intro n
       specialize ha n
       exact hMbound ha
+    replace habound : ∃ᶠ n in Filter.atTop, a n ∈ Set.Icc (-M) M := by
+      exact Filter.Frequently.of_forall habound
     have hmono : Monotone (fun n => (lr a M n).1) := by
       apply monotone_nat_of_le_succ
       intro n
@@ -1000,7 +1111,7 @@ theorem Heine_Borel (X: Set ℝ) :
       choose y hy using hn
       suffices hlr : ∀ n, (lr a M n).2 ≤ M by
         specialize hlr y
-        have := lr_l_le_r a M (by linarith) y
+        have := lr_l_le_r a M y (by linarith)
         linarith
       intro k
       induction' k with z ih
