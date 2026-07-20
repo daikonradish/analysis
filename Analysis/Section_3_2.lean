@@ -67,7 +67,11 @@ theorem SetTheory.Set.axiom_of_regularity {A:Set} (h: A ≠ ∅) :
 -/
 theorem SetTheory.Set.emptyset_exists (h: axiom_of_universal_specification):
     ∃ (X:Set), ∀ x, x ∉ X := by
-  sorry
+  set P : Object → Prop := fun _ => False
+  have := h P
+  unfold P at this
+  simp at this
+  exact this
 
 /--
   Exercise 3.2.1.  The spirit of the exercise is to establish these results without using either
@@ -75,7 +79,8 @@ theorem SetTheory.Set.emptyset_exists (h: axiom_of_universal_specification):
 -/
 theorem SetTheory.Set.singleton_exists (h: axiom_of_universal_specification) (x:Object):
     ∃ (X:Set), ∀ y, y ∈ X ↔ y = x := by
-  sorry
+  set P : Object → Prop := fun y => y = x
+  exact h P
 
 /--
   Exercise 3.2.1.  The spirit of the exercise is to establish these results without using either
@@ -83,7 +88,8 @@ theorem SetTheory.Set.singleton_exists (h: axiom_of_universal_specification) (x:
 -/
 theorem SetTheory.Set.pair_exists (h: axiom_of_universal_specification) (x₁ x₂:Object):
     ∃ (X:Set), ∀ y, y ∈ X ↔ y = x₁ ∨ y = x₂ := by
-  sorry
+  set P : Object → Prop := fun y =>  y = x₁ ∨ y = x₂
+  exact h P
 
 /--
   Exercise 3.2.1. The spirit of the exercise is to establish these results without using either
@@ -91,7 +97,8 @@ theorem SetTheory.Set.pair_exists (h: axiom_of_universal_specification) (x₁ x�
 -/
 theorem SetTheory.Set.union_exists (h: axiom_of_universal_specification) (A B:Set):
     ∃ (Z:Set), ∀ z, z ∈ Z ↔ z ∈ A ∨ z ∈ B := by
-  sorry
+  set P : Object → Prop := fun y => y ∈ A ∨ y ∈ B
+  exact h P
 
 /--
   Exercise 3.2.1. The spirit of the exercise is to establish these results without using either
@@ -99,7 +106,8 @@ theorem SetTheory.Set.union_exists (h: axiom_of_universal_specification) (A B:Se
 -/
 theorem SetTheory.Set.specify_exists (h: axiom_of_universal_specification) (A:Set) (P: A → Prop):
     ∃ (Z:Set), ∀ z, z ∈ Z ↔ ∃ h : z ∈ A, P ⟨ z, h ⟩ := by
-  sorry
+  set P' : Object → Prop := fun x => ∃ h : x ∈ A , P ⟨x, h⟩
+  exact h P'
 
 /--
   Exercise 3.2.1. The spirit of the exercise is to establish these results without using either
@@ -108,20 +116,85 @@ theorem SetTheory.Set.specify_exists (h: axiom_of_universal_specification) (A:Se
 theorem SetTheory.Set.replace_exists (h: axiom_of_universal_specification) (A:Set)
   (P: A → Object → Prop) (hP: ∀ x y y', P x y ∧ P x y' → y = y') :
     ∃ (Z:Set), ∀ y, y ∈ Z ↔ ∃ a : A, P a y := by
-  sorry
+  set P' : Object → Prop := fun x => ∃ a : A, P a x
+  exact h P'
 
 /-- Exercise 3.2.2 -/
-theorem SetTheory.Set.not_mem_self (A:Set) : (A:Object) ∉ A := by sorry
+theorem SetTheory.Set.not_mem_self (A:Set) : (A:Object) ∉ A := by
+  set A' : Set := {(A : Object)}
+  have h_non_empty : A' ≠ ∅ := by
+    have ha: (A:Object) ∈ A' := by rw [mem_singleton];
+    exact nonempty_of_inhabited ha
+  have h := axiom_of_regularity h_non_empty
+  choose x hx using h
+  have hx' : (x:Object) ∈ A' := by aesop
+  change (x:Object) ∈ {set_to_object A} at hx'
+  rw [mem_singleton] at hx'
+  rw [hx'] at hx
+  simp at hx
+  rw [disjoint_iff] at hx
+  unfold A' at hx
+  rw [eq_empty_iff_forall_notMem] at hx
+  contrapose! hx
+  use A; simp
+  exact (mem_coe A (set_to_object A)).mp hx
 
 /-- Exercise 3.2.2 -/
-theorem SetTheory.Set.not_mem_mem (A B:Set) : (A:Object) ∉ B ∨ (B:Object) ∉ A := by sorry
+theorem SetTheory.Set.not_mem_mem (A B:Set) : (A:Object) ∉ B ∨ (B:Object) ∉ A := by
+  set U : Set := {(A:Object), (B:Object)}
+  have hAU : (A:Object) ∈ U := by unfold U; simp
+  have hUnon : U ≠ ∅ := by
+    unfold U
+    exact nonempty_of_inhabited hAU
+  have h := axiom_of_regularity hUnon
+  unfold U at h
+  simp at h
+  rcases h with h | h
+  · rw [disjoint_iff, eq_empty_iff_forall_notMem] at h
+    right
+    specialize h B
+    contrapose! h
+    rw [mem_inter]; constructor
+    · exact h
+    · simp
+  · rw [disjoint_iff, eq_empty_iff_forall_notMem] at h
+    left
+    specialize h A
+    contrapose! h
+    rw [mem_inter]; constructor
+    · exact h
+    · simp
+
 
 /-- Exercise 3.2.3 -/
 theorem SetTheory.Set.univ_iff : axiom_of_universal_specification ↔
-  ∃ (U:Set), ∀ x, x ∈ U := by sorry
+  ∃ (U:Set), ∀ x, x ∈ U := by
+  constructor
+  · intro h
+    set P : Object → Prop := fun _ => True
+    choose U hU using h P
+    use U
+    intro x
+    specialize hU x
+    unfold P at hU
+    simpa using hU
+  · intro h
+    choose U hU using h
+    unfold axiom_of_universal_specification
+    intro P
+    set P' : U → Prop := fun x => P x
+    use specify U P'
+    intro x
+    unfold P'
+    have := hU x
+    apply specification_axiom' P' ⟨x, this⟩
 
 /-- Exercise 3.2.3 -/
-theorem SetTheory.Set.no_univ : ¬ ∃ (U:Set), ∀ (x:Object), x ∈ U := by sorry
+theorem SetTheory.Set.no_univ : ¬ ∃ (U:Set), ∀ (x:Object), x ∈ U := by
+  by_contra! h
+  choose U hU using h
+  specialize hU U
+  exact absurd hU (not_mem_self U)
 
 
 end Chapter3

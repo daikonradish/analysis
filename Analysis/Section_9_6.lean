@@ -28,24 +28,89 @@ abbrev BddOn (f:ℝ → ℝ) (X:Set ℝ) : Prop := ∃ M, ∀ x ∈ X, |f x| ≤
 
 /-- Remark 9.6.2 -/
 theorem BddOn.iff (f:ℝ → ℝ) (X:Set ℝ) : BddOn f X ↔ BddAboveOn f X ∧ BddBelowOn f X := by
-  sorry
+  constructor
+  · intro hbddon
+    choose M hM using hbddon
+    constructor <;>
+    · use M; intro x hx
+      specialize hM x hx
+      grind
+  · rintro ⟨habove, hbelow⟩
+    choose M hM using habove
+    choose L hL using hbelow
+    use max |M| |L|
+    intro x hx
+    specialize hM x hx
+    specialize hL x hx
+    grind
 
 theorem BddOn.iff' (f:ℝ → ℝ) (X:Set ℝ) :  BddOn f X ↔ Bornology.IsBounded (f '' X) := by
-  sorry
+  rw [isBounded_def]
+  constructor
+  · intro hbddon
+    choose M hM using hbddon
+    by_cases! hMpozneg : M ≤ 0
+    · use 1; constructor
+      · simp
+      · simp; grind
+    · use M; constructor
+      · exact hMpozneg
+      · simp; grind
+  · intro hborn
+    choose M hMpos hM using hborn
+    simp at hM
+    use M; intro x hx
+    have := hM hx
+    simp at this
+    grind
 
 theorem BddOn.of_bounded {f :ℝ → ℝ} {X: Set ℝ} {M:ℝ} (h: ∀ x ∈ X, |f x| ≤ M) : BddOn f X := by use M
 
-example : Continuous (fun x:ℝ ↦ x) := by sorry
+example : Continuous (fun x:ℝ ↦ x) := by
+  exact continuous_id
 
-example : ¬ BddOn (fun x:ℝ ↦ x) .univ  := by sorry
+example : ¬ BddOn (fun x:ℝ ↦ x) .univ  := by
+  intro h
+  choose M hM using h
+  specialize hM (M+1)
+  simp at hM
+  grind
 
-example : BddOn (fun x:ℝ ↦ x) (.Icc 1 2) := by sorry
+example : BddOn (fun x:ℝ ↦ x) (.Icc 1 2) := by
+  use 100
+  simp
+  intro x hx1 hx2
+  grind
 
-example : ContinuousOn (fun x:ℝ ↦ 1/x) (.Ioo 0 1) := by sorry
+example : ContinuousOn (fun x:ℝ ↦ 1/x) (.Ioo 0 1) := by
+  apply ContinuousOn.div
+  · exact continuousOn_const
+  · exact continuousOn_id
+  · simp; intro x hx0 hx1; linarith
 
-example : ¬ BddOn (fun x:ℝ ↦ 1/x) (.Ioo 0 1) := by sorry
+example : ¬ BddOn (fun x:ℝ ↦ 1/x) (.Ioo 0 1) := by
+  intro hb
+  choose M hM using hb
+  have hpos : ∀ x ∈ Set.Ioo 0 1, |(fun x ↦ 1 / (x:ℝ)) x| > 0 := by
+      intro x hx
+      simp at hx ⊢
+      grind
+  by_cases! hMpozneg : M ≤ 0
+  · specialize hM 0.5 (by norm_num)
+    specialize hpos 0.5 (by norm_num)
+    linarith
+  · have : (1 / (M + 1)) ∈ Set.Ioo 0 1 := by
+      simp; constructor
+      · linarith
+      · field_simp
+        linarith
+    specialize hM (1 / (M + 1)) this
+    simp at hM
+    grind
 
-theorem why_7_6_3 {n: ℕ → ℕ} (hn: StrictMono n) (j:ℕ) : n j ≥ j := by sorry
+
+theorem why_7_6_3 {n: ℕ → ℕ} (hn: StrictMono n) (j:ℕ) : n j ≥ j := by
+  exact StrictMono.le_apply hn -- proven elsewhere, so i don't wanna do this again; it's just induction.
 
 /-- Lemma 9.6.3 -/
 theorem BddOn.of_continuous_on_compact {a b:ℝ} (_h:a < b) {f:ℝ → ℝ} (hf: ContinuousOn f (.Icc a b) ) :
@@ -78,9 +143,14 @@ theorem BddOn.of_continuous_on_compact {a b:ℝ} (_h:a < b) {f:ℝ → ℝ} (hf:
 #check isMinOn_iff
 
 /-- Remark 9.6.6 -/
-theorem BddAboveOn.isMaxOn {f:ℝ → ℝ} {X:Set ℝ} {x₀:ℝ} (h: IsMaxOn f X x₀): BddAboveOn f X := by sorry
+theorem BddAboveOn.isMaxOn {f:ℝ → ℝ} {X:Set ℝ} {x₀:ℝ} (h: IsMaxOn f X x₀): BddAboveOn f X := by
+  rw [isMaxOn_iff] at h
+  use f x₀
 
-theorem BddBelowOn.isMinOn {f:ℝ → ℝ} {X:Set ℝ} {x₀:ℝ} (h: IsMinOn f X x₀): BddBelowOn f X := by sorry
+theorem BddBelowOn.isMinOn {f:ℝ → ℝ} {X:Set ℝ} {x₀:ℝ} (h: IsMinOn f X x₀): BddBelowOn f X := by
+  rw [isMinOn_iff] at h
+  use -f x₀
+  simp; exact h
 
 /-- Proposition 9.6.7 (Maximum principle) -/
 theorem IsMaxOn.of_continuous_on_compact {a b:ℝ} (h:a < b) {f:ℝ → ℝ} (hf: ContinuousOn f (.Icc a b)) :
@@ -93,7 +163,20 @@ theorem IsMaxOn.of_continuous_on_compact {a b:ℝ} (h:a < b) {f:ℝ → ℝ} (hf
   set m := sSup E
   have claim1 {y:ℝ} (hy: y ∈ E) : y ≤ m := le_csSup (BddAbove.mono hE bddAbove_Icc) hy
   suffices h : ∃ xmax, xmax ∈ Set.Icc a b ∧ f xmax = m
-  . sorry
+  . simp_rw [isMaxOn_iff]
+    choose xmax hmem hmax using h
+    use xmax; refine ⟨hmem, ?_⟩
+    intro x hx
+    rw [hmax]
+    unfold m E
+    apply le_csSup
+    · use M
+      intro y hy; simp at hy
+      choose x' habx' hfx' using hy
+      specialize hM x' (by grind)
+      rw [← hfx']
+      grind
+    · simp; use x; grind
   have claim2 (n:ℕ) : ∃ x ∈ Set.Icc a b, m - 1/(n+1:ℝ) < f x := by
     have : 1/(n+1:ℝ) > 0 := by positivity
     replace : m - 1/(n+1:ℝ) < sSup E := by linarith
@@ -125,14 +208,68 @@ theorem IsMaxOn.of_continuous_on_compact {a b:ℝ} (h:a < b) {f:ℝ → ℝ} (hf
 
 
 
-
 theorem IsMinOn.of_continuous_on_compact {a b:ℝ} (h:a < b) {f:ℝ → ℝ} (hf: ContinuousOn f (.Icc a b)) :
   ∃ xmin ∈ Set.Icc a b, IsMinOn f (.Icc a b) xmin := by
-  sorry
+  choose M hM using BddOn.of_continuous_on_compact h hf
+  set E := f '' (.Icc a b)
+  have hE : E ⊆ .Icc (-M) M := by rintro _ ⟨ x, hx, rfl ⟩; simp [hM x hx, ←abs_le]
+  have hnon : E ≠ ∅ := by simp [E]; contrapose! h; grind [Set.Icc_eq_empty_iff]
+  set m := sInf E
+  have claim1 {y:ℝ} (hy: y ∈ E) : m ≤ y := csInf_le (BddBelow.mono hE bddBelow_Icc) hy
+  suffices h : ∃ xmin, xmin ∈ Set.Icc a b ∧ f xmin = m
+  . simp_rw [isMinOn_iff]
+    choose xmin hmem hmin using h
+    use xmin; refine ⟨hmem, ?_⟩
+    intro x hx
+    rw [hmin]
+    unfold m E
+    apply csInf_le
+    · use -M
+      intro y hy; simp at hy
+      choose x' habx' hfx' using hy
+      specialize hM x' (by grind)
+      rw [← hfx']
+      grind
+    · simp; use x; grind
+  have claim2 (n:ℕ) : ∃ x ∈ Set.Icc a b, f x < m + 1/(n+1:ℝ) := by
+    have : 1/(n+1:ℝ) > 0 := by positivity
+    replace : sInf E < m + 1/(n+1:ℝ)  := by linarith
+    rw [←Set.nonempty_iff_ne_empty] at hnon
+    apply exists_lt_of_csInf_lt hnon at this
+    grind
+  set x : ℕ → ℝ := fun n ↦ (claim2 n).choose
+  have hx (n:ℕ) : x n ∈ Set.Icc a b := (claim2 n).choose_spec.1
+  have hfx (n:ℕ) : f (x n) < m + 1/(n+1:ℝ):= (claim2 n).choose_spec.2
+  observe hclosed : IsClosed (.Icc a b)
+  observe hbounded : Bornology.IsBounded (.Icc a b)
+  have ⟨ n, hn, ⟨ xmin, hmin, hconv⟩ ⟩ := (Heine_Borel (.Icc a b)).mp ⟨hclosed, hbounded⟩ x hx
+  use xmin, hmin
+  have hn_lower (j:ℕ) : n j ≥ j := why_7_6_3 hn j
+  have hconv' : Filter.atTop.Tendsto (fun j ↦ f (x (n j))) (nhds (f xmin)) :=
+    hconv.comp_of_continuous (hf.continuousWithinAt hmin) (fun j ↦ hx (n j))
+  have hupper (j:ℕ) : f (x (n j)) < m + 1/(j+1:ℝ) := by
+    apply lt_of_lt_of_le (hfx (n j)); gcongr; grind
+  have hlower (j:ℕ) : m ≤ f (x (n j))  := by apply claim1; simp [Set.mem_image, E]; use x (n j), hx (n j)
+  have hconvm : Filter.atTop.Tendsto (fun j ↦ f (x (n j))) (nhds m) := by
+    apply Filter.Tendsto.squeeze (h := fun j ↦ m + 1/(j+1:ℝ)) (g := fun _ ↦ m) (f := fun j ↦ f (x (n j)))
+    · simp
+    · convert tendsto_one_div_add_atTop_nhds_zero_nat.const_add m (a:=0); simp
+    · intro x; simp; grind
+    · intro x; simp; grind
+  exact tendsto_nhds_unique hconv' hconvm
 
-example : IsMaxOn (fun x ↦ x^2) (.Icc (-2) 2) 2 := by sorry
+example : IsMaxOn (fun x ↦ x^2) (.Icc (-2) 2) 2 := by
+  rw [isMaxOn_iff]
+  simp
+  intro x hx' hx
+  nlinarith
 
-example : IsMaxOn (fun x ↦ x^2) (.Icc (-2) 2) (-2) := by sorry
+example : IsMaxOn (fun x ↦ x^2) (.Icc (-2) 2) (-2) := by
+  rw [isMaxOn_iff]
+  simp
+  intro x hx' hx
+  nlinarith
+
 
 theorem sSup.of_isMaxOn {f:ℝ → ℝ} {X:Set ℝ} {x₀:ℝ} (hx₀: x₀ ∈ X) (h: IsMaxOn f X x₀) :
   sSup (f '' X) = f x₀ := by
@@ -158,7 +295,26 @@ theorem sInf.of_continuous_on_compact {a b:ℝ} (h:a < b) (f:ℝ → ℝ) (hf: C
 example : ∃ f: ℝ → ℝ, ContinuousOn f (.Ioo 1 2) ∧ BddOn f (.Ioo 1 2) ∧
   ∃ x₀ ∈ Set.Ioo 1 2, IsMinOn f (.Ioo 1 2) x₀ ∧
   ¬ ∃ x₀ ∈ Set.Ioo 1 2, IsMaxOn f (.Ioo 1 2) x₀
-  := by sorry
+  := by
+  use fun x => |x - 1.5|
+  refine ⟨?_, ?_, ?_⟩
+  · apply ContinuousOn.abs
+    apply ContinuousOn.sub
+    · exact continuousOn_id
+    · exact continuousOn_const
+  · use 100; intro x hx
+    simp at hx ⊢; rw [abs_le]
+    constructor <;> linarith
+  · use 1.5; constructor
+    · simp; constructor <;> norm_num
+    · constructor
+      · rw [isMinOn_iff]
+        intro x hx; simp at hx ⊢
+      · simp_rw [isMaxOn_iff]; push_neg
+        intro x hx
+        rw []
+        sorry
+
 
 /-- Exercise 9.6.1 b) -/
 example : ∃ f: ℝ → ℝ, ContinuousOn f (.Ici 0) ∧ BddOn f (.Ici 0) ∧

@@ -972,7 +972,6 @@ theorem WellFoundedLT.partialOrder {X:Type} [PartialOrder X] (x₀ : X) :
   have hs_mem : sY_infty ∈ Y_infty := Set.mem_iUnion_of_mem ⟨ _, hYs_Ω ⟩ (by simp)
   specialize hs _ hs_mem; order
 
-#check WellFoundedLT.partialOrder
 /-- Lemma 8.5.15 (Zorn's lemma) / Exercise 8.5.14 -/
 theorem Zorns_lemma {X:Type} [PartialOrder X] [Nonempty X]
   (hchain: ∀ Y:Set X, IsTotal Y ∧ Y.Nonempty → ∃ x, IsUpperBound Y x) : ∃ x:X, IsMax x := by
@@ -1517,8 +1516,6 @@ instance PartialInj.partialOrder {Y X : Type} : PartialOrder (PartialInj Y X) :=
     rwa [← hsubb] at hsuba
 }
 
-#check Set.iUnionLift
-
 instance PartialInj.nonempty {Y X : Type} : Nonempty (PartialInj Y X) :=
   ⟨{ dom := ∅
      toFun := fun a => absurd a.property (Set.notMem_empty a.val)
@@ -1765,7 +1762,6 @@ theorem PartialOrder.isMax_iff_isTotal (X : Type) (p : PartialOrder X) :
       exact p.le_refl b
 
 
-#check Zorns_lemma
 abbrev ExtendedOrder {X : Type} (p : PartialOrder X) := {q : PartialOrder X // p ≤ q}
 
 
@@ -2011,7 +2007,6 @@ lemma chain_totalChain {X : Type} [PartialOrder X] : ∀ C : Set (TotalChain X),
   exact Set.subset_biUnion_of_mem hc
 
 
-#check Zorns_lemma
 /-- Exercise 8.5.18 -/
 theorem hausdorff_of_zorns_lemma {X : Type} [PartialOrder X] :
     ∃ M : Set X, Maximal (fun (S : Set X) => IsTotal S) M := by
