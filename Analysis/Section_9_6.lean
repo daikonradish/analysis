@@ -66,6 +66,33 @@ theorem BddOn.iff' (f:ℝ → ℝ) (X:Set ℝ) :  BddOn f X ↔ Bornology.IsBoun
 
 theorem BddOn.of_bounded {f :ℝ → ℝ} {X: Set ℝ} {M:ℝ} (h: ∀ x ∈ X, |f x| ≤ M) : BddOn f X := by use M
 
+lemma BddOn.mono {f : ℝ → ℝ} {I J : Set ℝ} (hbd : BddOn f J) (h : I ⊆ J) : BddOn f I := by
+  choose B hB using hbd
+  use B
+  intro x hx
+  exact hB x (by apply h; exact hx)
+
+lemma BddBelow.of_BddOn {f : ℝ → ℝ} {I:Set ℝ} (h : BddOn f I) : BddBelow (f '' I) := by
+  obtain ⟨_, hbelow⟩ := (BddOn.iff _ _).mp h
+  choose B hB using hbelow; use -B
+  intro y hy; simp at hy; choose x hx hxeq using hy
+  specialize hB x hx; linarith
+
+lemma BddAbove.of_BddOn {f : ℝ → ℝ} {I:Set ℝ} (h : BddOn f I) : BddAbove (f '' I) := by
+  obtain ⟨habove, _⟩ := (BddOn.iff _ _).mp h
+  choose B hB using habove; use B
+  intro y hy; simp at hy; choose x hx hxeq using hy
+  specialize hB x hx; linarith
+
+lemma BddOn.of_smul {c : ℝ} {f : ℝ → ℝ} {I:Set ℝ} (h : BddOn f I) : BddOn (c • f) I := by
+  choose B hB using h
+  use |c| * B
+  intro x hx
+  specialize hB x hx
+  simp at hB ⊢
+  gcongr
+
+
 example : Continuous (fun x:ℝ ↦ x) := by
   exact continuous_id
 
@@ -311,39 +338,193 @@ example : ∃ f: ℝ → ℝ, ContinuousOn f (.Ioo 1 2) ∧ BddOn f (.Ioo 1 2) �
       · rw [isMinOn_iff]
         intro x hx; simp at hx ⊢
       · simp_rw [isMaxOn_iff]; push_neg
-        intro x hx
-        rw []
-        sorry
+        intro x hx; simp at hx ⊢
+        by_cases hmidpt : x ≤ 1.5
+        · use (x+1) / 2; constructor <;> grind
+        · use (x+2) / 2; constructor <;> grind
 
 
 /-- Exercise 9.6.1 b) -/
 example : ∃ f: ℝ → ℝ, ContinuousOn f (.Ici 0) ∧ BddOn f (.Ici 0) ∧
   ∃ x₀ ∈ Set.Ici 0, IsMaxOn f (.Ici 0) x₀ ∧
   ¬ ∃ x₀ ∈ Set.Ici 0, IsMinOn f (.Ici 0) x₀
-  := by sorry
+  := by
+  use fun x => 1 / (x+1)
+  refine ⟨?_, ?_, ?_⟩
+  · apply ContinuousOn.div
+    · exact continuousOn_const
+    · apply ContinuousOn.add
+      · exact continuousOn_id
+      · exact continuousOn_const
+    · intro x hx; simp at hx ⊢; linarith
+  · use 100; intro x hx; simp at hx ⊢
+    field_simp
+    rw [abs_of_nonneg (by linarith)]
+    nlinarith
+  · use 0; simp; constructor
+    · intro x hx; simp at hx ⊢
+      field_simp; linarith
+    · intro x hx; rw [isMinOn_iff]; push_neg
+      use (x + 100); simp; constructor
+      · linarith
+      · field_simp; linarith
 
 /-- Exercise 9.6.1 c) -/
 example : ∃ f: ℝ → ℝ, BddOn f (.Icc (-1) 1) ∧
   (¬ ∃ x₀ ∈ Set.Icc (-1) 1, IsMinOn f (.Icc (-1) 1) x₀) ∧
   (¬ ∃ x₀ ∈ Set.Icc (-1) 1, IsMaxOn f (.Icc (-1) 1) x₀)
-  := by sorry
+  := by
+  use fun x => if x = 1 ∨ x = -1 then 0 else x
+  refine ⟨?_, ?_, ?_⟩
+  · use 100; intro x hx; simp at hx ⊢
+    split_ifs with h
+    · simp
+    · push_neg at h; rw [abs_le];
+      constructor <;> linarith
+  · simp_rw [isMinOn_iff]; push_neg
+    intro x hx
+    by_cases h1 : (x = 1 ∨ x = -1)
+    · use -0.5; simp; constructor
+      · constructor <;> linarith
+      · rw [if_neg, if_pos]
+        · norm_num
+        · exact h1
+        · simp; constructor <;> linarith
+    · set δ := (x + 1) / 2
+      use x - δ; simp at hx ⊢; constructor
+      · unfold δ; simp; constructor
+        · linarith
+        · field_simp; grind
+      · rw [if_neg, if_neg]
+        · unfold δ; field_simp; ring_nf; grind
+        · exact h1
+        · unfold δ; simp; constructor
+          · linarith
+          · grind
+  · simp_rw [isMaxOn_iff]; push_neg
+    intro x hx
+    by_cases h1 : (x = 1 ∨ x = -1)
+    · use 0.5; simp; constructor
+      · constructor <;> linarith
+      · rw [if_pos, if_neg]
+        · norm_num
+        · simp; constructor <;> linarith
+        · exact h1
+    · set δ := (1 - x) / 2
+      use x + δ; simp at hx ⊢; constructor
+      · unfold δ; constructor <;> linarith
+      · rw [if_neg, if_neg]
+        · unfold δ; field_simp; ring_nf; grind
+        · unfold δ; simp; constructor
+          · grind
+          · linarith
+        · exact h1
+
 
 /-- Exercise 9.6.1 d) -/
-example : ∃ f: ℝ → ℝ, ¬ BddAboveOn f (.Icc (-1) 1) ∧ ¬ BddBelowOn f (.Icc (-1) 1) := by sorry
+example : ∃ f: ℝ → ℝ, ¬ BddAboveOn f (.Icc (-1) 1) ∧ ¬ BddBelowOn f (.Icc (-1) 1) := by
+  use fun x => (1/x); constructor
+  · unfold BddAboveOn; push_neg; intro M
+    by_contra! h
+    by_cases! hM : M < 1
+    · specialize h 1 (by grind); simp at h
+      linarith
+    · have hM2 : (1 / (2*M)) ≤ (1/2) := by field_simp; exact hM
+      have hM0 : 0 <  (1 / (2*M)) := by positivity
+      specialize h ((1 / (2*M))) (by grind)
+      field_simp at h
+      linarith
+  · unfold BddBelowOn; push_neg; intro M
+    by_contra! h
+    by_cases! hM : M < 1
+    · specialize h (-1) (by grind); simp at h
+      linarith
+    · have hM2 : (-1/2) ≤ (-1 / (2*M)) := by field_simp; grind
+      have hM0 : 0 <  (1 / (2*M)) := by positivity
+      specialize h (-(1 / (2*M))) (by grind)
+      field_simp at h
+      linarith
 
 /-- Exercise 9.6.2 -/
 theorem BddOn.add (f g : ℝ → ℝ) (X : Set ℝ) (hf : BddOn f X) (hg : BddOn g X) :
-    BddOn (f + g) X := by sorry
+    BddOn (f + g) X := by
+    choose M hM using hf
+    choose L hL using hg
+    use M + L
+    intro x hx
+    specialize hM x hx
+    specialize hL x hx
+    simp; grind
 
 theorem BddOn.sub (f g : ℝ → ℝ) (X : Set ℝ) (hf : BddOn f X) (hg : BddOn g X) :
-    BddOn (f - g) X := by sorry
+    BddOn (f - g) X := by
+    choose M hM using hf
+    choose L hL using hg
+    use M + L
+    intro x hx
+    specialize hM x hx
+    specialize hL x hx
+    simp; grind
 
 theorem BddOn.mul (f g : ℝ → ℝ) (X : Set ℝ) (hf : BddOn f X) (hg : BddOn g X) :
-    BddOn (f * g) X := by sorry
+    BddOn (f * g) X := by
+    choose M hM using hf
+    choose L hL using hg
+    by_cases! hpos : M ≤ 0 ∨ L ≤ 0
+    · use 0
+      rcases hpos with hM0 | hL0
+      · have : ∀ x, x ∈ X → f x = 0 := by
+          intro x hx
+          specialize hM x hx
+          grind
+        intro x hx; simp
+        specialize this x hx
+        rw [this]; simp
+      · have : ∀ x, x ∈ X → g x = 0 := by
+          intro x hx
+          specialize hM x hx
+          grind
+        intro x hx; simp
+        specialize this x hx
+        rw [this]; simp
+    · use M * L
+      intro x hx
+      specialize hM x hx
+      specialize hL x hx
+      simp; gcongr
+      linarith
 
 def BddOn.div : Decidable (∀ (f g : ℝ → ℝ) (X : Set ℝ) (_ : ∀ x ∈ X, g x ≠ 0) (_ : BddOn f X)
     (_: BddOn g X), (BddOn (f / g) X)) := by
   -- the first line of this construction should be either `apply isTrue` or `apply isFalse`, depending on whether you believe the given statement to be true or false.
-  sorry
+  apply isFalse
+  push_neg
+  use fun _ => 1
+  use fun x => x
+  use Set.Ioo 0 1
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro x hx; simp at hx ⊢; linarith
+  · use 100; intro x hx; simp at hx ⊢
+  · use 100; intro x hx; simp at hx ⊢; grind
+  · intro M
+    simp [-one_div]
+    by_cases! hM0 : M ≤ 0
+    · use 0.5; constructor
+      · norm_num
+      · have : 0 < |1 / (0.5:ℝ)| := by norm_num
+        linarith
+    · by_cases! hM1 : M ≤ 1
+      · use 0.5; constructor
+        · norm_num
+        · norm_num; linarith
+      · have hM2 : (1 / (2*M)) ≤ (1/2) := by field_simp; linarith
+        have hM0 : 0 <  (1 / (2*M)) := by positivity
+        use ((1 / (2*M))); constructor
+        · grind
+        · rw [abs_of_pos (by positivity)]
+          field_simp; linarith
+
+
+
 
 end Chapter9

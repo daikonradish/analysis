@@ -35,7 +35,6 @@ example (c x₀:ℝ) : ContinuousWithinAt (fun x ↦ c) .univ x₀ := by
   rw [ContinuousWithinAt.iff]
   apply Convergesto.const
 
-
 example (c x₀:ℝ) : ContinuousAt (fun x ↦ c) x₀ := by
   unfold ContinuousAt
   simp
@@ -46,7 +45,6 @@ example (c:ℝ) : ContinuousOn (fun x:ℝ ↦ c) .univ := by
   intro x hx
   rw [ContinuousWithinAt.iff]
   apply Convergesto.const
-
 
 example (c:ℝ) : Continuous (fun x:ℝ ↦ c) := by
   rw [continuous_iff_continuousAt]
@@ -75,7 +73,6 @@ example {x₀:ℝ} (h: x₀ ≠ 0) : ContinuousAt Real.sign x₀ := by
     simp at hr
     rw [if_neg (by linarith), if_pos (by linarith)]
 
-
 example  :¬ ContinuousAt Real.sign 0 := by
   unfold Real.sign
   intro h
@@ -90,7 +87,6 @@ example  :¬ ContinuousAt Real.sign 0 := by
     grind
   have heq := tendsto_nhds_unique hleft hleft'
   simp at heq
-
 
 /-- Example 9.4.5 --/
 example (x₀:ℝ) : ¬ ContinuousAt f_9_3_21 x₀ := by
@@ -330,9 +326,13 @@ example : Continuous (fun x:ℝ ↦ |x^2-8*x+8|^(Real.sqrt 2) / (x^2 + 1)) := by
 
 /-- Exercise 9.4.6 -/
 theorem ContinuousOn.restrict {X Y:Set ℝ} {f: ℝ → ℝ} (hY: Y ⊆ X) (hf: ContinuousOn f X) : ContinuousOn f Y := by
+  exact ContinuousOn.mono hf hY
 
-  sorry
 
 /-- Exercise 9.4.7 -/
 theorem Continuous.polynomial {n:ℕ} (c: Fin n → ℝ) : Continuous (fun x:ℝ ↦ ∑ i, c i * x ^ (i:ℕ)) := by
-  sorry
+  induction' n with k ih
+  · simp
+    apply continuous_const
+  · simp_rw [Fin.sum_univ_castSucc]
+    exact (ih _).add (continuous_const.mul (continuous_pow k))

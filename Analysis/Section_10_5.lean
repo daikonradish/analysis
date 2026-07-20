@@ -27,7 +27,31 @@ theorem _root_.Filter.Tendsto.of_div {X: Set ℝ} {f g: ℝ → ℝ} {x₀ f'x�
   (∃ δ > 0, ∀ x ∈ X \ {x₀} ∩ .Ioo (x₀ - δ) (x₀ + δ), g x ≠ 0) ∧
   (nhdsWithin x₀ (X \ {x₀})).Tendsto (fun x ↦ f x / g x) (nhds (f'x₀ / g'x₀))
   := by
-  sorry
+  constructor
+  . rw [_root_.HasDerivWithinAt.iff_approx_linear] at hg'x₀
+    choose δ hδpos hδ using hg'x₀ (|g'x₀|/2) (by positivity)
+    use δ; constructor
+    . exact hδpos
+    . rintro x ⟨hX, hIoo⟩
+      specialize hδ x hX.1 (by rw [abs_lt]; simp at hIoo; constructor <;> linarith)
+      by_contra! h'
+      rw [h', hgx₀] at hδ
+      simp at hδ
+      have habsgt0 : |x - x₀| > 0 := by
+        simp at hX ⊢
+        intro hx
+        have : x = x₀ := by linarith
+        exact hX.2 this
+      have habspos : |g'x₀| > 0 := by positivity
+      nlinarith
+  . rw [hasDerivWithinAt_iff_tendsto_slope] at hf'x₀ hg'x₀
+    have hdiv := hf'x₀.div hg'x₀ hg_non
+    apply hdiv.congr'
+    filter_upwards [self_mem_nhdsWithin] with p hp
+    simp
+    rw [slope_def_field, slope_def_field, hfx₀, hgx₀]
+    have : p - x₀ ≠ 0 := by simp at hp; grind
+    field_simp; simp
 
 /-- Proposition 10.5.2 (L'Hôpital's rule, II) -/
 theorem _root_.Filter.Tendsto.of_div' {a b L:ℝ} (hab: a < b) {f g f' g': ℝ → ℝ}

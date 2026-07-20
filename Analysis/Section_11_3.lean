@@ -129,10 +129,46 @@ theorem integ_congr {f g:ℝ → ℝ} {I: BoundedInterval} (h: Set.EqOn f g I) :
 noncomputable abbrev IntegrableOn (f:ℝ → ℝ) (I: BoundedInterval) : Prop :=
   BddOn f I ∧ lower_integral f I = upper_integral f I
 
+theorem IntegrableOn.congr {f g:ℝ → ℝ} {I: BoundedInterval} (h: Set.EqOn f g I) (hf : IntegrableOn f I) : IntegrableOn g I := by
+  have ⟨hfbd, hagree⟩ := hf
+  have hgbd : BddOn g I := by
+    choose B hB using hfbd
+    use B
+    intro x hx
+    specialize hB x hx
+    specialize h hx
+    rwa [← h]
+  refine ⟨hgbd, ?_⟩
+
+
+
+  sorry
+
 /-- Lemma 11.3.7 / Exercise 11.3.3 -/
 theorem integ_of_piecewise_const {f:ℝ → ℝ} {I: BoundedInterval} (hf: PiecewiseConstantOn f I) :
   IntegrableOn f I ∧ integ f I = hf.integ' := by
-  sorry
+  have hbdd : BddOn f I := by
+    choose P hP using hf
+    use ∑ J ∈ P.intervals, |constant_value_on f J|
+    intro x hx
+    choose J hJ hJuniq using P.exists_unique x hx
+    have hfxconst : f x = constant_value_on f J := by
+      apply ConstantOn.eq
+      . exact hP J hJ.1
+      . exact hJ.2
+    rw [hfxconst]
+    apply Finset.single_le_sum (f:=fun K:BoundedInterval => |constant_value_on f K|) (by simp)
+    exact hJ.1
+  have hmajff : MajorizesOn f f I := by unfold MajorizesOn; simp
+  have hminff : MinorizesOn f f I := by unfold MinorizesOn; simp
+  have h1 := upper_integral_le_integ hbdd hmajff hf
+  have h2 := integ_le_lower_integral hbdd hminff hf
+  have h3 := lower_integral_le_upper hbdd
+  refine ⟨⟨hbdd, ?_⟩, ?_⟩
+  . linarith
+  . rw [integ]
+    linarith
+
 
 /-- Remark 11.3.8 -/
 theorem integ_on_subsingleton {f:ℝ → ℝ} {I: BoundedInterval} (hI: |I|ₗ = 0) :
@@ -153,55 +189,345 @@ noncomputable abbrev lower_riemann_sum (f:ℝ → ℝ) {I: BoundedInterval} (P: 
 theorem upper_riemann_sum_le {f g: ℝ → ℝ} {I:BoundedInterval} (P: Partition I)
   (hgf: MajorizesOn g f I) (hg: PiecewiseConstantWith g P) :
   upper_riemann_sum f P ≤ integ g I := by
-   sorry
+  have hgpiecewiseon: PiecewiseConstantOn g I := by
+    use P
+  obtain ⟨hintegrableon, heq⟩ := integ_of_piecewise_const hgpiecewiseon
+  have hdef := PiecewiseConstantOn.integ_def hg
+  simp only [PiecewiseConstantOn.integ'] at heq
+  rw [hdef] at heq
+  rw [heq]
+  simp only [upper_riemann_sum, PiecewiseConstantWith.integ]
+  apply Finset.sum_le_sum
+  intro J hJ
+  by_cases! hemp : (J:Set ℝ).Nonempty
+  . have := BoundedInterval.length_nonneg J
+    suffices sSup (f '' J) ≤ constant_value_on g J by nlinarith
+    apply csSup_le
+    . simp; exact hemp
+    . intro b hb; simp at hb
+      choose b' hb' using hb
+      rw [← hb'.2]
+      have : constant_value_on g J = g b' := by
+        symm
+        have hconst := hg J hJ
+        apply ConstantOn.eq hconst
+        exact hb'.1
+      rw [this]
+      apply hgf
+      apply P.contains J hJ
+      exact hb'.1
+  . simp [BoundedInterval.length_of_empty hemp]
+
 
 theorem lower_riemann_sum_ge {f h: ℝ → ℝ} {I:BoundedInterval} (P: Partition I)
   (hfh: MinorizesOn h f I) (hg: PiecewiseConstantWith h P) :
   integ h I ≤ lower_riemann_sum f P := by
-   sorry
+  have hpiecewiseon : PiecewiseConstantOn h I := by
+    use P
+  obtain ⟨hintegrable, heq⟩ := integ_of_piecewise_const hpiecewiseon
+  have hdef := PiecewiseConstantOn.integ_def hg
+  simp only [PiecewiseConstantOn.integ'] at heq
+  rw [hdef] at heq
+  rw [heq]
+  simp only [lower_riemann_sum, PiecewiseConstantWith.integ]
+  apply Finset.sum_le_sum
+  intro J hJ
+  by_cases! hemp : (J:Set ℝ).Nonempty
+  . have := BoundedInterval.length_nonneg J
+    suffices constant_value_on h J ≤ sInf (f '' J) by nlinarith
+    apply le_csInf
+    . simp; exact hemp
+    . intro b hb
+      choose b' hb' using hb
+      rw [← hb'.2]
+      have : constant_value_on h J = h b' := by
+        symm
+        have hconst := hg J hJ
+        apply ConstantOn.eq hconst
+        exact hb'.1
+      rw [this]
+      apply hfh
+      apply P.contains J hJ
+      exact hb'.1
+  . simp [BoundedInterval.length_of_empty hemp]
 
 /-- Proposition 11.3.12 / Exercise 11.3.5 -/
 theorem upper_integ_le_upper_sum {f:ℝ → ℝ} {I:BoundedInterval} (hf: BddOn f I)
   (P: Partition I): upper_integral f I ≤ upper_riemann_sum f P := by
-  sorry
+  classical
+  set g : ℝ → ℝ := fun (x:ℝ) => if h : ∃ J ∈ P.intervals, x ∈ J then sSup (f '' (h.choose) : Set ℝ) else 0
+  have hg_eq {x:ℝ} {J:BoundedInterval} (hJ : J ∈ P.intervals) (hxJ : x ∈ J) : g x = sSup (f '' J) := by
+    have hchoice : ∃ J ∈ P.intervals, x ∈ J := by use J
+    obtain ⟨hspec1, hspec2⟩ := hchoice.choose_spec
+    have hchose : hchoice.choose = J := by
+      obtain ⟨J', ⟨hJmem, hJ'⟩, hJ'uniq⟩ := P.exists_unique x (by apply P.contains J hJ; exact hxJ)
+      simp at hJ'uniq
+      have h1 := hJ'uniq hchoice.choose hspec1 hspec2
+      have h2 := hJ'uniq J hJ hxJ
+      rw [h1, h2]
+    unfold g; rw [dif_pos hchoice, hchose]
+  have hf_bddabove {J : BoundedInterval} (hJ : J ∈ P.intervals) :  BddAbove (f '' J) := by
+    choose B hB using hf
+    use B; intro y hy
+    choose x hxJ hfxy using hy
+    specialize hB x (by apply P.contains J hJ; exact hxJ)
+    grind
+  apply csInf_le
+  . exact integral_bound_below hf
+  . simp
+    have hpconstwith : PiecewiseConstantWith g P := by
+      intro J hJ
+      apply ConstantOn.of_const (c:=sSup (f '' J))
+      intro x hx
+      exact hg_eq hJ hx
+    use g; refine ⟨⟨?_, ?_⟩, ?_⟩
+    . intro x hx
+      obtain ⟨J, ⟨hJP, hxJ⟩, _⟩ := P.exists_unique x hx
+      rw [hg_eq hJP hxJ]; apply le_csSup
+      . exact hf_bddabove hJP
+      . tauto
+    . use P
+    · rw [PiecewiseConstantOn.integ_def hpconstwith]
+      simp only [PiecewiseConstantWith.integ]
+      apply Finset.sum_congr rfl
+      intro J hJ
+      by_cases! hemp : (J:Set ℝ).Nonempty
+      . have := BoundedInterval.length_nonneg J
+        suffices constant_value_on g J = sSup (f '' J) by nlinarith
+        apply ConstantOn.const_eq hemp
+        intro x hx
+        exact hg_eq hJ hx
+      . simp [BoundedInterval.length_of_empty hemp]
+
 
 theorem upper_integ_eq_inf_upper_sum {f:ℝ → ℝ} {I:BoundedInterval} (hf: BddOn f I) :
   upper_integral f I = sInf (.range (fun P : Partition I ↦ upper_riemann_sum f P)) := by
-  sorry
+  apply le_antisymm
+  . apply le_csInf
+    . use sSup (f '' I)  * |I|ₗ
+      simp; use ⊥; unfold upper_riemann_sum
+      have : (⊥: Partition I).intervals = ({I}:Finset BoundedInterval) := by rfl
+      simp [this]
+    . intro P hP; simp at hP
+      choose S hS using hP
+      rw [← hS]
+      exact upper_integ_le_upper_sum hf S
+  . unfold upper_riemann_sum
+    apply le_csInf
+    . use sSup (f '' I)  * |I|ₗ
+      simp
+      set g := fun _ => sSup (f '' I)
+      use g; refine ⟨⟨?majorizes, ?piecewiseon⟩, ?piecewisewith⟩
+      · intro x hx
+        unfold g
+        apply le_csSup
+        . choose B hB using hf
+          use B; intro y hy
+          choose x hxI hfxy using hy
+          rw [← hfxy]
+          specialize hB x hxI
+          grind
+        . use x
+      . apply ConstantOn.piecewiseConstantOn
+        apply ConstantOn.of_const'
+      . have hpwconstwith: PiecewiseConstantWith g (⊥:Partition I) := by
+          intro J hJ
+          rw [BoundedInterval.intervals_of_bot'] at hJ; subst hJ
+          apply ConstantOn.of_const'
+        simp only [PiecewiseConstantOn.integ_def hpwconstwith, PiecewiseConstantWith.integ]
+        have hint : (⊥:Partition I).intervals = ({I}:Finset BoundedInterval) := by rfl
+        simp only [hint, Finset.sum_singleton]
+        by_cases! hemp : (I:Set ℝ).Nonempty
+        . have hconstval := ConstantOn.const_eq (f:=g) (c:=sSup (f '' I)) hemp (by unfold g; tauto)
+          rw [hconstval]
+        . simp [BoundedInterval.length_of_empty hemp]
+    . intro b hb
+      choose g hg using hb
+      simp at hg; obtain ⟨⟨hmajorize, hpwconston⟩, hginteg⟩ := hg
+      have ⟨hgintegrable, hginteg'⟩ := integ_of_piecewise_const hpwconston
+      simp only [PiecewiseConstantOn.integ'] at hginteg'
+      choose P hP using hpwconston
+      have hupperleb : upper_riemann_sum f P ≤ b := by
+        rw [← hginteg, ← hginteg']
+        exact upper_riemann_sum_le P hmajorize hP
+      suffices sInf (Set.range fun (P:Partition I) ↦ ∑ J ∈ P.intervals, sSup (f '' J) * J.length) ≤ upper_riemann_sum f P by linarith
+      apply csInf_le
+      . use upper_integral f I
+        intro x hx; simp at hx
+        choose Q hQ using hx
+        rw [← hQ]
+        exact upper_integ_le_upper_sum hf Q
+      . simp
 
 theorem lower_integ_ge_lower_sum {f:ℝ → ℝ} {I:BoundedInterval} (hf: BddOn f I)
   (P: Partition I): lower_riemann_sum f P ≤ lower_integral f I := by
-  sorry
+  classical
+  set g : ℝ → ℝ := fun (x:ℝ) => if h : ∃ J ∈ P.intervals, x ∈ J then sInf (f '' (h.choose) : Set ℝ) else 0
+  have hg_eq {x:ℝ} {J:BoundedInterval} (hJ : J ∈ P.intervals) (hxJ : x ∈ J) : g x = sInf (f '' J) := by
+    have hchoice : ∃ J ∈ P.intervals, x ∈ J := by use J
+    obtain ⟨hspec1, hspec2⟩ := hchoice.choose_spec
+    have hchose : hchoice.choose = J := by
+      obtain ⟨J', ⟨hJmem, hJ'⟩, hJ'uniq⟩ := P.exists_unique x (by apply P.contains J hJ; exact hxJ)
+      simp at hJ'uniq
+      have h1 := hJ'uniq hchoice.choose hspec1 hspec2
+      have h2 := hJ'uniq J hJ hxJ
+      rw [h1, h2]
+    unfold g; rw [dif_pos hchoice, hchose]
+  have hf_bddbelow {J : BoundedInterval} (hJ : J ∈ P.intervals) :  BddBelow (f '' J) := by
+    choose B hB using hf
+    use -B; intro y hy
+    choose x hxJ hfxy using hy
+    specialize hB x (by apply P.contains J hJ; exact hxJ)
+    grind
+  apply le_csSup
+  . exact integral_bound_above hf
+  . simp
+    have hpconstwith : PiecewiseConstantWith g P := by
+      intro J hJ
+      apply ConstantOn.of_const (c:=sInf (f '' J))
+      intro x hx
+      exact hg_eq hJ hx
+    use g; refine ⟨⟨?_, ?_⟩, ?_⟩
+    . intro x hx
+      obtain ⟨J, ⟨hJP, hxJ⟩, _⟩ := P.exists_unique x hx
+      rw [hg_eq hJP hxJ]; apply csInf_le
+      . exact hf_bddbelow hJP
+      . tauto
+    . use P
+    . rw [PiecewiseConstantOn.integ_def hpconstwith]
+      simp only [PiecewiseConstantWith.integ]
+      apply Finset.sum_congr rfl
+      intro J hJ
+      by_cases! hemp : (J:Set ℝ).Nonempty
+      . have := BoundedInterval.length_nonneg J
+        suffices constant_value_on g J = sInf (f '' J) by nlinarith
+        apply ConstantOn.const_eq hemp
+        intro x hx
+        exact hg_eq hJ hx
+      . simp [BoundedInterval.length_of_empty hemp]
 
 theorem lower_integ_eq_sup_lower_sum {f:ℝ → ℝ} {I:BoundedInterval} (hf: BddOn f I) :
   lower_integral f I = sSup (.range (fun P : Partition I ↦ lower_riemann_sum f P)) := by
-  sorry
+  apply le_antisymm
+  . unfold lower_riemann_sum
+    apply csSup_le
+    . use sInf (f '' I) * |I|ₗ
+      simp
+      set g := fun _ => sInf (f '' I)
+      use g; refine ⟨⟨?minorizes, ?piecewiseon⟩, ?piecewisewith⟩
+      · intro x hx
+        unfold g
+        apply csInf_le
+        . choose B hB using hf
+          use -B; intro y hy
+          choose x hxI hfxy using hy
+          rw [← hfxy]
+          specialize hB x hxI
+          grind
+        . use x
+      . apply ConstantOn.piecewiseConstantOn
+        apply ConstantOn.of_const'
+      . have hpwconstwith: PiecewiseConstantWith g (⊥:Partition I) := by
+          intro J hJ
+          rw [BoundedInterval.intervals_of_bot'] at hJ; subst hJ
+          apply ConstantOn.of_const'
+        simp only [PiecewiseConstantOn.integ_def hpwconstwith, PiecewiseConstantWith.integ]
+        have hint : (⊥:Partition I).intervals = ({I}:Finset BoundedInterval) := by rfl
+        simp only [hint, Finset.sum_singleton]
+        by_cases! hemp : (I:Set ℝ).Nonempty
+        . have hconstval := ConstantOn.const_eq (f:=g) (c:=sInf (f '' I)) hemp (by unfold g; tauto)
+          rw [hconstval]
+        . simp [BoundedInterval.length_of_empty hemp]
+    . intro b hb
+      choose g hg using hb
+      simp at hg; obtain ⟨⟨hminorize, hpwconston⟩, hginteg⟩ := hg
+      have ⟨hgintegrable, hginteg'⟩ := integ_of_piecewise_const hpwconston
+      simp only [PiecewiseConstantOn.integ'] at hginteg'
+      choose P hP using hpwconston
+      have hblelower : b ≤ lower_riemann_sum f P := by
+         rw [← hginteg, ← hginteg']
+         exact lower_riemann_sum_ge P hminorize hP
+      suffices lower_riemann_sum f P ≤ sSup (Set.range fun (P:Partition I) ↦ ∑ J ∈ P.intervals, sInf (f '' ↑J) * J.length) by linarith
+      apply le_csSup
+      . use lower_integral f I
+        intro x hx
+        choose P hP using hx
+        simp at hP; rw [← hP]
+        exact lower_integ_ge_lower_sum hf P
+      . simp
+  . apply csSup_le
+    . use sInf (f '' I) * |I|ₗ
+      simp; use ⊥
+      unfold lower_riemann_sum
+      have hint : (⊥:Partition I).intervals = {I} := by rfl
+      simp [hint]
+    . intro S hS; simp at hS; choose P hP using hS
+      rw [← hP]
+      exact lower_integ_ge_lower_sum hf P
 
 /-- Exercise 11.3.1 -/
 theorem MajorizesOn.trans {f g h: ℝ → ℝ} {I: BoundedInterval}
   (hfg: MajorizesOn f g I) (hgh: MajorizesOn g h I) : MajorizesOn f h I := by
-  sorry
+  intro x hx
+  specialize hgh x hx
+  specialize hfg x hx
+  linarith
+
 
 /-- Exercise 11.3.1 -/
 theorem MajorizesOn.anti_symm {f g: ℝ → ℝ} {I: BoundedInterval}:
   (∀ x ∈ (I:Set ℝ), f x = g x) ↔ MajorizesOn f g I ∧ MajorizesOn g f I := by
-  sorry
+  constructor
+  . intro heq; constructor <;>
+    . intro x hx; specialize heq x hx; linarith
+  . rintro ⟨hf, hg⟩
+    intro x hx
+    specialize hg x hx
+    specialize hf x hx
+    linarith
 
 /-- Exercise 11.3.2 -/
 def MajorizesOn.of_add : Decidable ( ∀ (f g h:ℝ → ℝ) (I:BoundedInterval) (hfg: MajorizesOn f g I),
  MajorizesOn (f+h) (g+h) I) := by
   -- the first line of this construction should be either `apply isTrue` or `apply isFalse`.
-  sorry
+  apply isTrue
+  intro f g h I hf x hx
+  simp
+  exact hf x hx
+
+
 
 def MajorizesOn.of_mul : Decidable ( ∀ (f g h:ℝ → ℝ) (I:BoundedInterval) (hfg: MajorizesOn f g I),
  MajorizesOn (f*h) (g*h) I) := by
   -- the first line of this construction should be either `apply isTrue` or `apply isFalse`.
-  sorry
+  apply isFalse; push_neg
+  use fun x => 2 * x
+  use fun x => x
+  use fun x => - x
+  use Ioo 0 1
+  constructor
+  . intro x hx; simp at hx ⊢
+    linarith
+  . intro h
+    specialize h (0.5) (by simp; norm_num)
+    simp at h
+    norm_num at h
 
 def MajorizesOn.of_smul : Decidable ( ∀ (f g:ℝ → ℝ) (c:ℝ) (I:BoundedInterval) (hfg: MajorizesOn f g I),
  MajorizesOn (c • f) (c • g) I) := by
   -- the first line of this construction should be either `apply isTrue` or `apply isFalse`.
-  sorry
+  apply isFalse; push_neg
+  use fun x => 2 * x
+  use fun x => x
+  use -1
+  use Ioo 0 1
+  constructor
+  . intro x hx; simp at hx ⊢
+    linarith
+  . intro h
+    specialize h (0.5) (by simp; norm_num)
+    simp at h
+    norm_num at h
 
 
 end Chapter11

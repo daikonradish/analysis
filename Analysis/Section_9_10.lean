@@ -45,11 +45,51 @@ theorem Filter.Tendsto.AtTop.iff {X: Set ℝ} (f:ℝ → ℝ) (L:ℝ) : Filter.T
 
 /-- Exercise 9.10.4 -/
 example : Filter.Tendsto (fun x:ℝ ↦ 1/x) (.atTop ⊓ .principal (.Ioi 0)) (nhds 0) := by
-  sorry
+  rw [Filter.Tendsto.AtTop.iff]
+  intro ε hε
+  simp only [Set.mem_inter_iff, Set.mem_Ioi, Set.mem_Ici]
+  simp only [sub_zero]
+  use 2 / ε
+  intro x hx
+  obtain ⟨hx0, hxε⟩ := hx
+  rw [abs_of_pos (by positivity)]
+  field_simp at hxε ⊢
+  linarith
 
 open Classical in
 /-- Exercise 9.10.1 -/
 example (a:ℕ → ℝ) (L:ℝ) : Filter.Tendsto (fun x:ℝ ↦ (if h:(∃ n:ℕ, x = n) then a h.choose else 0)) (.atTop ⊓ .principal ((fun n:ℕ ↦ (n:ℝ)) '' .univ)) (nhds L) ↔ Filter.atTop.Tendsto a (nhds L) := by
-  sorry
+  constructor
+  . intro htt
+    rw [Filter.Tendsto.AtTop.iff] at htt
+    rw [Metric.tendsto_atTop]
+    intro ε hε
+    choose M hM using htt ε hε
+    use ⌈M⌉₊
+    intro n hn
+    specialize hM n (by simp; exact Nat.ceil_le.mp hn)
+    rw [dif_pos (by use n)] at hM
+    simp at hM
+    rwa [Real.dist_eq]
+  . intro htt
+    rw [Metric.tendsto_atTop] at htt
+    rw [Filter.Tendsto.AtTop.iff]
+    intro ε hε
+    choose N hN using htt ε hε
+    use N
+    intro x hx; simp at hx
+    obtain ⟨hexist, hxN⟩ := hx
+    choose y hy using hexist
+    have h : ∃ (n:ℕ), x = n := by use y; exact hy.symm
+    -- lol it's like hunting rabbits
+    rw [dif_pos h]
+    have := h.choose_spec
+    specialize hN y (by simp; rw [← hy] at hxN; simpa using hxN)
+    -- now we're playing whackamole
+    rw [Real.dist_eq] at hN
+    rw [this] at hy
+    norm_cast at hy
+    rw [← hy]
+    exact hN
 
 end Chapter9
