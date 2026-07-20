@@ -331,5 +331,5 @@ theorem Nat.sq_add_eq (a b: Nat) :
    _ = a^2 + 2 * (a * b) + b^2         := by rw [← two_mul (a * b)]
    _ = a^2 + (2 * a * b) + b^2         := by rw [mul_assoc]
 
-#check Nat.two_mul
+
 end Chapter2
