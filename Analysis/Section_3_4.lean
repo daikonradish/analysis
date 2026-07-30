@@ -41,7 +41,20 @@ theorem SetTheory.Set.mem_image {X Y:Set} (f:X → Y) (S: Set) (y:Object) :
 
 /-- Alternate definition of image using axiom of specification -/
 theorem SetTheory.Set.image_eq_specify {X Y:Set} (f:X → Y) (S: Set) :
-    image f S = Y.specify (fun y ↦ ∃ x:X, x.val ∈ S ∧ f x = y) := by sorry
+    image f S = Y.specify (fun y ↦ ∃ x:X, x.val ∈ S ∧ f x = y) := by
+  apply SetTheory.Set.ext
+  intro x
+  rw [SetTheory.Set.specification_axiom'', mem_image]
+  constructor
+  . intro h
+    choose s hS hf using h
+    rw [← hf]
+    use (f s).property, s
+  . intro h
+    choose hx s hs hf using h
+    use s; refine ⟨hs, ?_⟩
+    rw [hf]
+
 
 /--
   Connection with Mathlib's notion of image.  Note the need to utilize the {name}`Subtype.val` coercion
@@ -68,10 +81,21 @@ theorem SetTheory.Set.image_f_3_4_2 : image f_3_4_2 {1,2,3} = {2,4,6} := by
 example : (fun n:ℤ ↦ n^2) '' {-1,0,1,2} = {0,1,4} := by aesop
 
 theorem SetTheory.Set.mem_image_of_eval {X Y:Set} (f:X → Y) (S: Set) (x:X) :
-    x.val ∈ S → (f x).val ∈ image f S := by sorry
+    x.val ∈ S → (f x).val ∈ image f S := by
+  intro h
+  rw [mem_image]
+  use x
+
 
 theorem SetTheory.Set.mem_image_of_eval_counter :
-    ∃ (X Y:Set) (f:X → Y) (S: Set) (x:X), ¬((f x).val ∈ image f S → x.val ∈ S) := by sorry
+    ∃ (X Y:Set) (f:X → Y) (S: Set) (x:X), ¬((f x).val ∈ image f S → x.val ∈ S) := by
+  use Nat, {0}
+  use fun x => ⟨0, by simp⟩
+  use {0}, 1
+  simp
+  use 0, (SetTheory.nat_equiv 0).2
+  exact nat_coe_eq_iff'.mp rfl
+
 
 /--
   Definition 3.4.4 (inverse images).
@@ -110,7 +134,23 @@ theorem SetTheory.Set.preimage_f_3_4_2 : preimage f_3_4_2 {2,4,6} = {1,2,3} := b
   all_goals simp
 
 theorem SetTheory.Set.image_preimage_f_3_4_2 :
-    image f_3_4_2 (preimage f_3_4_2 {1,2,3}) ≠ {1,2,3} := by sorry
+    image f_3_4_2 (preimage f_3_4_2 {1,2,3}) ≠ {1,2,3} := by
+  have : 1 ∉ image f_3_4_2 (preimage f_3_4_2 {1, 2, 3}) := by
+    by_contra! h
+    rw [mem_image] at h
+    obtain ⟨x, hx⟩ := h
+    rw [mem_preimage] at hx
+    obtain ⟨ h1, h2 ⟩ := hx
+    rw [f_3_4_2] at h2
+    simp only [Object.ofnat_eq] at h2
+    have : 2 * nat_equiv.symm x = 1 := by
+      rw [← SetTheory.Object.natCast_inj]
+      exact h2
+    omega
+  by_contra! h
+  rw [h] at this
+  simp at this
+
 
 /-- Example 3.4.7 (using the Mathlib notion of preimage) -/
 example : (fun n:ℤ ↦ n^2) ⁻¹' {0,1,4} = {-2,-1,0,1,2} := by
@@ -118,7 +158,12 @@ example : (fun n:ℤ ↦ n^2) ⁻¹' {0,1,4} = {-2,-1,0,1,2} := by
   on_goal 3 => have : 2 ^ 2 = (4:ℤ) := (by norm_num); rw [←h, sq_eq_sq_iff_eq_or_eq_neg] at this
   all_goals aesop
 
-example : (fun n:ℤ ↦ n^2) ⁻¹' ((fun n:ℤ ↦ n^2) '' {-1,0,1,2}) ≠ {-1,0,1,2} := by sorry
+example : (fun n:ℤ ↦ n^2) ⁻¹' ((fun n:ℤ ↦ n^2) '' {-1,0,1,2}) ≠ {-1,0,1,2} := by
+  by_contra h
+  rw [Set.ext_iff] at h
+  specialize h (-2)
+  simp at h
+
 
 instance SetTheory.Set.inst_pow : Pow Set Set where
   pow := pow
@@ -169,13 +214,52 @@ theorem SetTheory.Set.example_3_4_9 (F:Object) :
 
 /-- Exercise 3.4.6 (i). One needs to provide a suitable definition of the power set here. -/
 def SetTheory.Set.powerset (X:Set) : Set :=
-  (({0,1} ^ X): Set).replace (P := sorry) (by sorry)
+  (({0,1} ^ X): Set).replace
+    (P := fun f x ↦ x = preimage (Classical.choose ((powerset_axiom f.val).mp f.property)) ({0} : Set))
+    (by simp)
 
 open Classical in
 /-- Exercise 3.4.6 (i) -/
 @[simp]
 theorem SetTheory.Set.mem_powerset {X:Set} (x:Object) :
-    x ∈ powerset X ↔ ∃ Y:Set, x = Y ∧ Y ⊆ X := by sorry
+    x ∈ powerset X ↔ ∃ Y:Set, x = Y ∧ Y ⊆ X := by
+  constructor
+  . intro h
+    rw [powerset] at h
+    rw [SetTheory.Set.replacement_axiom] at h
+    obtain ⟨f, hf, hf'⟩ := h
+    generalize_proofs h'
+    use preimage h'.choose {0}
+    refine ⟨by rfl, ?_⟩
+    exact preimage_in_domain h'.choose ({0}:Set)
+  . intro h
+    obtain ⟨Y, rfl, hY⟩ := h
+    simp only [powerset, replacement_axiom]
+    set f: X → ({0,1}:Set) := fun x ↦ if x.val ∈ Y then ⟨0, by simp⟩ else ⟨1, by simp⟩
+    use ⟨function_to_object X _ f, by rw [powerset_axiom]; use f; rw [coe_of_fun]⟩
+    rw [EmbeddingLike.apply_eq_iff_eq]
+    generalize_proofs h1 h2
+    apply ext
+    have hspec := h2.choose_spec
+    change function_to_object _ _ (choose h2) = function_to_object X {0, 1} f at hspec
+    rw [EmbeddingLike.apply_eq_iff_eq] at hspec
+    rw [hspec]
+    intro x; constructor
+    . intro h
+      rw [mem_preimage']
+      use ⟨x, hY _ h⟩
+      unfold f; simp
+      rw [if_pos h]
+    . intro h
+      rw [mem_preimage'] at h
+      obtain ⟨z, rfl, hf⟩ := h
+      unfold f at hf
+      rw [mem_singleton] at hf
+      by_cases! h' : z.val ∈ Y
+      . exact h'
+      . rw [if_neg h'] at hf
+        simp at hf
+
 
 /-- Lemma 3.4.10 -/
 theorem SetTheory.Set.exists_powerset (X:Set) :
@@ -212,10 +296,33 @@ theorem SetTheory.Set.powerset_of_triple (a b c x:Object) :
 theorem SetTheory.Set.union_axiom (A: Set) (x:Object) :
     x ∈ union A ↔ ∃ (S:Set), x ∈ S ∧ (S:Object) ∈ A := SetTheory.union_axiom A x
 
+theorem SetTheory.Set.mem_quad (x a b c d:Object) : x ∈ ({a,b,c,d}:Set) ↔ (x = a ∨ x = b ∨ x = c ∨ x = d) := by
+  simp [Insert.insert, Insert.insert, mem_union, mem_singleton]
+
 /-- Example 3.4.12 -/
 theorem SetTheory.Set.example_3_4_12 :
     union { (({2,3}:Set):Object), (({3,4}:Set):Object), (({4,5}:Set):Object) } = {2,3,4,5} := by
-  sorry
+  ext x
+  rw [union_axiom]
+  constructor
+  . intro h
+    choose b hb hs using h
+    rw [mem_triple] at hs
+    rcases hs with hs | hs | hs <;>
+    . simp only [EmbeddingLike.apply_eq_iff_eq] at hs
+      rw [hs] at hb
+      rw [mem_pair] at hb
+      rw [mem_quad]
+      grind
+  . intro h
+    rw [mem_quad] at h
+    rcases h with h | h | h | h
+    . use (({2,3}:Set)); rw [h]; simp
+    . use (({2,3}:Set)); rw [h]; simp
+    . use (({4,5}:Set)); rw [h]; simp
+    . use (({4,5}:Set)); rw [h]; simp
+
+
 
 /-- Connection with Mathlib union -/
 theorem SetTheory.Set.union_eq (A: Set) :
@@ -247,7 +354,14 @@ theorem SetTheory.Set.iUnion_eq (I: Set) (A: I → Set) :
     (iUnion I A : _root_.Set Object) = ⋃ α, (A α: _root_.Set Object) := by
   ext; simp [mem_iUnion]
 
-theorem SetTheory.Set.iUnion_of_empty (A: (∅:Set) → Set) : iUnion (∅:Set) A = ∅ := by sorry
+theorem SetTheory.Set.iUnion_of_empty (A: (∅:Set) → Set) : iUnion (∅:Set) A = ∅ := by
+  ext x
+  simp
+  by_contra h
+  rw [mem_iUnion] at h
+  choose a ha using h
+  simpa using a.property
+
 
 /-- Indexed intersection -/
 noncomputable abbrev SetTheory.Set.nonempty_choose {I:Set} (hI: I ≠ ∅) : I :=
@@ -261,61 +375,330 @@ noncomputable abbrev SetTheory.Set.iInter (I: Set) (hI: I ≠ ∅) (A: I → Set
 
 theorem SetTheory.Set.mem_iInter {I:Set} (hI: I ≠ ∅) (A: I → Set) (x:Object) :
     x ∈ iInter I hI A ↔ ∀ α:I, x ∈ A α := by
-  sorry
+  constructor
+  . intro h
+    rw [iInter, iInter'] at h
+    rw [specification_axiom''] at h
+    obtain ⟨h1, h2⟩ := h
+    intro a
+    have h3 := h2 a
+    exact h3
+  . intro h
+    rw [iInter, iInter']
+    rw [specification_axiom'']
+    use h (nonempty_choose hI)
 
 /-- Exercise 3.4.1 -/
 theorem SetTheory.Set.preimage_eq_image_of_inv {X Y V:Set} (f:X → Y) (f_inv: Y → X)
   (hf: Function.LeftInverse f_inv f ∧ Function.RightInverse f_inv f) (hV: V ⊆ Y) :
-    image f_inv V = preimage f V := by sorry
+    image f_inv V = preimage f V := by
+  ext x
+  constructor
+  . intro h
+    rw [mem_image] at h
+    obtain ⟨x', hx, hxf⟩ := h
+    rw [← hxf]
+    rw [mem_preimage]
+    rw [hf.2]
+    exact hx
+  . intro h
+    rw [mem_preimage'] at h
+    obtain ⟨x', hx', hfx'⟩  := h
+    rw [mem_image]
+    use (f x')
+    constructor
+    . exact hfx'
+    . rw [hf.1]
+      exact hx'
 
 /- Exercise 3.4.2.  State and prove an assertion connecting `preimage f (image f S)` and `S`. -/
 -- theorem SetTheory.Set.preimage_of_image {X Y:Set} (f:X → Y) (S: Set) (hS: S ⊆ X) : sorry := by sorry
+theorem SetTheory.Set.preimage_of_image {X Y:Set} (f:X → Y) (S: Set) (hS: S ⊆ X): S ⊆ preimage f (image f S) := by
+  intro x
+  rw [mem_preimage']
+  intro h
+  set x' : X := ⟨x, hS x h⟩
+  use x'; refine ⟨by rfl, ?_⟩
+  rw [mem_image]
+  use x'
+
 
 /- Exercise 3.4.2.  State and prove an assertion connecting `image f (preimage f U)` and `U`.
 Interestingly, it is not needed for U to be a subset of Y. -/
 -- theorem SetTheory.Set.image_of_preimage {X Y:Set} (f:X → Y) (U: Set) : sorry := by sorry
+theorem SetTheory.Set.image_of_preimage {X Y:Set} (f:X → Y) (U: Set): image f (preimage f U) ⊆ U := by
+  intro x h
+  rw [mem_image] at h
+  obtain ⟨y, hy, hf⟩ := h
+  rw [mem_preimage] at hy
+  rw [← hf]
+  exact hy
+
 
 /- Exercise 3.4.2.  State and prove an assertion connecting `preimage f (image f (preimage f U))` and `preimage f U`.
 Interestingly, it is not needed for U to be a subset of Y.-/
 -- theorem SetTheory.Set.preimage_of_image_of_preimage {X Y:Set} (f:X → Y) (U: Set) : sorry := by sorry
+theorem SetTheory.Set.preimage_of_image_of_preimage {X Y:Set} (f:X → Y) (U: Set): preimage f (image f (preimage f U)) = preimage f U := by
+  ext x
+  constructor
+  . intro h
+    rw [mem_preimage'] at ⊢ h
+    obtain ⟨y, rfl, hf⟩ := h
+    use y; simp
+    exact (image_of_preimage f U) _ hf
+  . intro h
+    rw [mem_preimage'] at h
+    obtain ⟨y, rfl, hf⟩ := h
+    apply preimage_of_image
+    . exact preimage_in_domain f U
+    . rw [mem_preimage']
+      use y
+
 
 /--
   Exercise 3.4.3.
 -/
 theorem SetTheory.Set.image_of_inter {X Y:Set} (f:X → Y) (A B: Set) :
-    image f (A ∩ B) ⊆ (image f A) ∩ (image f B) := by sorry
+    image f (A ∩ B) ⊆ (image f A) ∩ (image f B) := by
+  intro y hy
+  rw [mem_inter]
+  rw [mem_image] at ⊢ hy
+  obtain ⟨x, hx, hf⟩ := hy
+  rw [mem_inter] at hx
+  constructor
+  . use x; exact ⟨hx.1, hf⟩
+  . rw [mem_image]
+    use x; exact ⟨hx.2, hf⟩
+
 
 theorem SetTheory.Set.image_of_diff {X Y:Set} (f:X → Y) (A B: Set) :
-    (image f A) \ (image f B) ⊆ image f (A \ B) := by sorry
+    (image f A) \ (image f B) ⊆ image f (A \ B) := by
+  intro y hy
+  rw [mem_sdiff] at hy
+  obtain ⟨ h1, h2 ⟩ := hy
+  rw [mem_image] at h1 ⊢
+  obtain ⟨ x, hx, hf ⟩ := h1
+  use x
+  constructor
+  . rw [mem_sdiff]
+    constructor
+    . exact hx
+    . contrapose! h2
+      rw [mem_image]
+      use x
+  . exact hf
 
 theorem SetTheory.Set.image_of_union {X Y:Set} (f:X → Y) (A B: Set) :
-    image f (A ∪ B) = (image f A) ∪ (image f B) := by sorry
+    image f (A ∪ B) = (image f A) ∪ (image f B) := by
+  ext z
+  rw [mem_union, mem_image]
+  constructor
+  . intro h
+    obtain ⟨x, hx, hf⟩ := h
+    rw [mem_union] at hx
+    rcases hx with hx | hx
+    . left; rw [mem_image]; use x
+    . right; rw [mem_image]; use x
+  . intro h
+    simp_rw [mem_image] at h
+    simp_rw [mem_union]
+    rcases h with h | h
+    . peel h with y hy
+      exact ⟨by left; exact hy.1, hy.2⟩
+    . peel h with y hy
+      exact ⟨by right; exact hy.1, hy.2⟩
 
+open Classical in
 def SetTheory.Set.image_of_inter' : Decidable (∀ X Y:Set, ∀ f:X → Y, ∀ A B: Set, image f (A ∩ B) = (image f A) ∩ (image f B)) := by
   -- The first line of this construction should be either `apply isTrue` or `apply isFalse`
-  sorry
+  apply isFalse
+  push_neg
+  use {0, 1, 2}, {0, 1}
+  use fun x ↦ if x = ⟨0, by simp⟩ then ⟨0, by simp⟩ else if x = ⟨1, by simp⟩ then ⟨1, by simp⟩ else ⟨0, by simp⟩
+  use {0, 1}, {1, 2}
+  have heq : {0, 1} ∩ {1, 2} = ({1}:Set) := by
+    ext x
+    simp only [mem_inter, mem_singleton]
+    aesop
+  rw [heq]
+  by_contra! h
+  rw [Set.ext_iff] at h
+  specialize h 0; simp only [mem_inter, mem_image] at h
+  simp at h
 
+open Classical in
 def SetTheory.Set.image_of_diff' : Decidable (∀ X Y:Set, ∀ f:X → Y, ∀ A B: Set, image f (A \ B) = (image f A) \ (image f B)) := by
   -- The first line of this construction should be either `apply isTrue` or `apply isFalse`
-  sorry
+  apply isFalse
+  push_neg
+  use {0, 1, 2}, {0, 1}
+  use fun x ↦ if x = ⟨0, by simp⟩ then ⟨0, by simp⟩ else if x = ⟨1, by simp⟩ then ⟨1, by simp⟩ else ⟨0, by simp⟩
+  use {0, 1}, {1, 2}
+  have heq : {0, 1} \ {1, 2} = ({0}:Set) := by
+    ext x
+    simp only [mem_sdiff, mem_pair, mem_pair, mem_singleton]
+    aesop
+  rw [heq]
+  by_contra! h
+  rw [Set.ext_iff] at h
+  specialize h 0
+  simp only [mem_sdiff, mem_image] at h
+  simp at h
+
 
 /-- Exercise 3.4.4 -/
 theorem SetTheory.Set.preimage_of_inter {X Y:Set} (f:X → Y) (A B: Set) :
-    preimage f (A ∩ B) = (preimage f A) ∩ (preimage f B) := by sorry
+    preimage f (A ∩ B) = (preimage f A) ∩ (preimage f B) := by
+  ext x
+  constructor
+  . intro h
+    simp only [mem_inter]
+    simp only [mem_preimage'] at h ⊢
+    obtain ⟨x', rfl, hx'⟩ := h
+    rw [mem_inter] at hx'
+    constructor
+    . use x'; simp; exact hx'.1
+    . use x'; simp; exact hx'.2
+  . intro h
+    rw [mem_inter] at h
+    simp only [mem_preimage'] at h ⊢
+    obtain ⟨ha, hb⟩ := h
+    obtain ⟨y₁, hyeq₁, hy₁⟩ := ha
+    obtain ⟨y₂, hyeq₂, hy₂⟩ := hb
+    use y₁; simp; constructor
+    . rwa [← hyeq₁] at hyeq₂
+    . have hy : y₁ = y₂ := by
+        rw [← coe_inj, hyeq₁, hyeq₂]
+      subst hy
+      constructor <;> assumption
+
 
 theorem SetTheory.Set.preimage_of_union {X Y:Set} (f:X → Y) (A B: Set) :
-    preimage f (A ∪ B) = (preimage f A) ∪ (preimage f B) := by sorry
+    preimage f (A ∪ B) = (preimage f A) ∪ (preimage f B) := by
+  ext x
+  constructor
+  . intro h
+    rw [mem_union]
+    simp only [mem_preimage'] at h ⊢
+    obtain ⟨z, rfl, hz⟩ := h
+    rw [mem_union] at hz
+    rcases hz with hz | hz
+    . left; use z
+    . right; use z
+  . intro h
+    simp_rw [mem_union] at h
+    simp only [mem_preimage'] at h ⊢
+    simp_rw [mem_union]
+    rcases h with h | h
+    . peel h with x' hx'
+      refine ⟨hx'.1, ?_⟩
+      left; exact hx'.2
+    . peel h with x' hx'
+      refine ⟨hx'.1, ?_⟩
+      right; exact hx'.2
 
 theorem SetTheory.Set.preimage_of_diff {X Y:Set} (f:X → Y) (A B: Set) :
-    preimage f (A \ B) = (preimage f A) \ (preimage f B)  := by sorry
+    preimage f (A \ B) = (preimage f A) \ (preimage f B)  := by
+  ext x
+  constructor
+  . intro h
+    rw [mem_preimage'] at h
+    obtain ⟨x', rfl, hx'⟩ := h
+    rw [mem_sdiff] at hx' ⊢
+    constructor
+    . rw [mem_preimage]; exact hx'.1
+    . intro h'; rw [mem_preimage'] at h'
+      choose z hz hz' using h'
+      have : z = x' := by exact (coe_inj X z x').mp hz
+      subst this
+      exact hx'.2 hz'
+  . intro h
+    rw [mem_sdiff] at h
+    obtain ⟨hA, hB⟩ := h
+    rw [mem_preimage'] at hA hB ⊢
+    push_neg at hB
+    peel hA with p hp
+    refine ⟨hp.1, ?_⟩
+    rw [mem_sdiff]
+    exact ⟨hp.2, hB p hp.1 ⟩
+
 
 /-- Exercise 3.4.5 -/
 theorem SetTheory.Set.image_preimage_of_surj {X Y:Set} (f:X → Y) :
-    (∀ S, S ⊆ Y → image f (preimage f S) = S) ↔ Function.Surjective f := by sorry
+    (∀ S, S ⊆ Y → image f (preimage f S) = S) ↔ Function.Surjective f := by
+  constructor
+  . intro h
+    rw [Function.Surjective]
+    intro y'
+    obtain ⟨y, hy⟩ := y'
+    specialize h {y}
+    have hyY : {y} ⊆ Y := by
+      intro x hx
+      rw [mem_singleton] at hx
+      rw [hx]
+      exact hy
+    have h2 := h hyY
+    rw [Set.ext_iff] at h2
+    specialize h2 y
+    rw [mem_singleton] at h2
+    simp only [iff_true] at h2
+    rw [mem_image] at h2
+    obtain ⟨x, hx, hf⟩ := h2
+    use x
+    rw [← coe_inj]
+    rw [hf]
+  . intro h
+    rw [Function.Surjective] at h
+    intro S hS
+    apply subset_antisymm
+    . exact image_of_preimage f S
+    . intro s hs
+      rw [mem_image]
+      have hy := hS _ hs
+      specialize h ⟨s, hy⟩
+      obtain ⟨ x, hx ⟩ := h
+      use x
+      rw [hx]
+      refine ⟨?_, by rfl⟩
+      rw [mem_preimage, hx]
+      exact hs
 
 /-- Exercise 3.4.5 -/
 theorem SetTheory.Set.preimage_image_of_inj {X Y:Set} (f:X → Y) :
-    (∀ S, S ⊆ X → preimage f (image f S) = S) ↔ Function.Injective f := by sorry
+    (∀ S, S ⊆ X → preimage f (image f S) = S) ↔ Function.Injective f := by
+  constructor
+  . intro h
+    rw [Function.Injective]
+    intro a b ha
+    specialize h {b.val}
+    have hsub : {b.val} ⊆ X := by
+      intro x
+      rw [mem_singleton]
+      intro h
+      rw [h]
+      exact b.property
+    have h1 := h hsub
+    have ha : a.val ∈ preimage f (image f {↑b}) := by
+      rw [mem_preimage, ha, mem_image]
+      use b
+      constructor <;> simp only [mem_singleton]
+    rw [h1] at ha
+    rw [mem_singleton] at ha
+    rwa [coe_inj] at ha
+  . intro h
+    rw [Function.Injective] at h
+    intro S hS
+    apply subset_antisymm
+    . intro s
+      rw [mem_preimage']
+      intro hx
+      obtain ⟨x', rfl, hf'⟩ := hx
+      rw [mem_image] at hf'
+      obtain ⟨x'', hx'', hf'' ⟩ := hf'
+      have := h ((coe_inj _ _ _).mp hf'')
+      rwa [← this]
+    . exact preimage_of_image f S hS
+
 
 /-- Helper lemma for Exercise 3.4.7. -/
 @[simp]
@@ -331,40 +714,217 @@ lemma SetTheory.Set.mem_union_powerset_replace_iff {S : Set} {P : S.powerset →
 /-- Exercise 3.4.7 -/
 theorem SetTheory.Set.partial_functions {X Y:Set} :
     ∃ Z:Set, ∀ F:Object, F ∈ Z ↔ ∃ X' Y':Set, X' ⊆ X ∧ Y' ⊆ Y ∧ ∃ f: X' → Y', F = f := by
-  sorry
+  use union ((powerset X).replace (P := fun X' 𝒳 ↦
+    have hX' := (mem_powerset _).mp X'.property
+    𝒳 = union ((powerset Y).replace (P := fun Y' 𝒴 ↦
+      have hY' := (mem_powerset _).mp Y'.property
+      𝒴 = set_to_object (Classical.choose hY' ^ Classical.choose hX')
+    ) (by simp_all))
+  ) (by simp_all))
+  intro F
+  constructor
+  . intro h; rw [union_axiom] at h
+    obtain ⟨S, hS, h'⟩ := h
+    rw [replacement_axiom] at h'
+    obtain  ⟨X', hX'⟩ := h'
+    simp only [EmbeddingLike.apply_eq_iff_eq] at hX'
+    rw [hX', union_axiom] at hS
+    obtain ⟨S', hS', h''⟩ := hS
+    rw [replacement_axiom] at h''
+    obtain ⟨Y', hY'⟩ := h''
+    simp only [EmbeddingLike.apply_eq_iff_eq] at hY'
+    rw [hY', powerset_axiom] at hS'
+    obtain ⟨f, hf⟩ := hS'
+    generalize_proofs a b at f
+    use Classical.choose a, Classical.choose b
+    constructor
+    . exact (Classical.choose_spec a).2
+    . refine ⟨(Classical.choose_spec b).2, ?_⟩
+      use f; exact hf.symm
+  . intro h
+    obtain ⟨X', Y', hX', hY', f, hf⟩ := h
+    rw [union_axiom]
+    have hpowerX := (mem_powerset (set_to_object X')).mpr ⟨X', ⟨by rfl, hX'⟩⟩
+    have hpowerY := (mem_powerset (set_to_object Y')).mpr ⟨Y', ⟨by rfl, hY'⟩⟩
+    have hchooseX : Classical.choose ((mem_powerset X').mp hpowerX) = X' := by
+      set p := (mem_powerset (set_to_object X')).mp hpowerX
+      change Classical.choose p = X'
+      have h := Classical.choose_spec p
+      exact set_to_object.injective h.1.symm
+    have hchooseY : Classical.choose ((mem_powerset Y').mp hpowerY) = Y' := by
+      set p := (mem_powerset (set_to_object Y')).mp hpowerY
+      change Classical.choose p = Y'
+      have h := Classical.choose_spec p
+      exact set_to_object.injective h.1.symm
+    use (
+      union ((powerset Y).replace (P := fun Y' 𝒴 ↦
+        have hY' := (mem_powerset _).mp Y'.property
+        𝒴 = set_to_object (Classical.choose hY' ^ X')
+      ) (by intro x y y' a; simp_all only)))
+    constructor
+    . rw [union_axiom]
+      use Y' ^ X'
+      constructor
+      . rw [powerset_axiom]
+        use f; exact hf.symm
+      . rw [replacement_axiom, ← hchooseY]
+        simp only [EmbeddingLike.apply_eq_iff_eq, Subtype.exists]
+        use Y', hpowerY
+        simp
+    . rw [replacement_axiom]
+      use ⟨ X', hpowerX ⟩
+      simp_all
+
 
 /--
   Exercise 3.4.8.  The point of this exercise is to prove it without using the
   pairwise union operation {kw (of := «term_∪_»)}`∪`.
 -/
 theorem SetTheory.Set.union_pair_exists (X Y:Set) : ∃ Z:Set, ∀ x, x ∈ Z ↔ (x ∈ X ∨ x ∈ Y) := by
-  sorry
+  use union {set_to_object X, set_to_object Y}
+  intro x; rw [union_axiom]
+  constructor
+  . intro h
+    obtain ⟨S, hx, hS⟩ := h
+    rw [mem_pair] at hS
+    simp at hS
+    rcases hS with hS | hS
+    . subst hS; left; exact hx
+    . subst hS; right; exact hx
+  . intro h
+    rcases h with h | h
+    . use X; simp; exact h
+    . use Y; simp; exact h
 
 /-- Exercise 3.4.9 -/
 theorem SetTheory.Set.iInter'_insensitive {I:Set} (β β':I) (A: I → Set) :
-    iInter' I β A = iInter' I β' A := by sorry
+    iInter' I β A = iInter' I β' A := by
+  rw [iInter', iInter']
+  ext x
+  constructor
+  . intro h
+    rw [specification_axiom''] at h ⊢
+    obtain ⟨_ , ha⟩ := h
+    have hb := ha β'
+    use hb
+  . intro h
+    rw [specification_axiom''] at h⊢
+    obtain ⟨_ , ha⟩ := h
+    have hb := ha β
+    use hb
+
+
 
 /-- Exercise 3.4.10 -/
 theorem SetTheory.Set.union_iUnion {I J:Set} (A: (I ∪ J:Set) → Set) :
     iUnion I (fun α ↦ A ⟨ α.val, by simp [α.property]⟩)
     ∪ iUnion J (fun α ↦ A ⟨ α.val, by simp [α.property]⟩)
-    = iUnion (I ∪ J) A := by sorry
+    = iUnion (I ∪ J) A := by
+  ext x
+  constructor
+  . intro h; rw [mem_union] at h
+    rcases h with h | h
+    . rw [mem_iUnion] at h ⊢
+      obtain ⟨u, hu⟩ := h
+      use ⟨u, by grind⟩
+    . rw [mem_iUnion] at h ⊢
+      obtain ⟨u, hu⟩ := h
+      use ⟨u, by grind⟩
+  . intro h; rw [mem_iUnion] at h
+    choose a ha using h
+    rw [mem_union, mem_iUnion, mem_iUnion]
+    have hprop := a.property
+    rw [mem_union] at hprop
+    rcases hprop with h | h
+    . left; use ⟨a, h⟩
+    . right; use ⟨a, h⟩
+
 
 /-- Exercise 3.4.10 -/
-theorem SetTheory.Set.union_of_nonempty {I J:Set} (hI: I ≠ ∅) (hJ: J ≠ ∅) : I ∪ J ≠ ∅ := by sorry
+theorem SetTheory.Set.union_of_nonempty {I J:Set} (hI: I ≠ ∅) (hJ: J ≠ ∅) : I ∪ J ≠ ∅ := by
+  contrapose! hI
+  rw [eq_empty_iff_forall_notMem] at hI ⊢
+  intro x hx
+  specialize hI x
+  contrapose! hI
+  rw [mem_union]; left; exact hx
 
 /-- Exercise 3.4.10 -/
 theorem SetTheory.Set.inter_iInter {I J:Set} (hI: I ≠ ∅) (hJ: J ≠ ∅) (A: (I ∪ J:Set) → Set) :
     iInter I hI (fun α ↦ A ⟨ α.val, by simp [α.property]⟩)
     ∩ iInter J hJ (fun α ↦ A ⟨ α.val, by simp [α.property]⟩)
-    = iInter (I ∪ J) (union_of_nonempty hI hJ) A := by sorry
+    = iInter (I ∪ J) (union_of_nonempty hI hJ) A := by
+  ext x
+  constructor
+  . intro h
+    rw [mem_inter] at h
+    obtain ⟨ha, hb⟩ := h
+    rw [mem_iInter] at ha hb ⊢
+    intro ⟨k, hk⟩
+    rw [mem_union] at hk
+    rcases hk with hk | hk
+    . exact ha ⟨k, hk⟩
+    . exact hb ⟨k, hk⟩
+  . intro h
+    simp_rw [mem_iInter] at h
+    rw [mem_inter, mem_iInter, mem_iInter]
+    constructor
+    . intro ⟨k, hk⟩
+      exact h ⟨k, by rw [mem_union]; left; exact hk⟩
+    . intro ⟨k, hk⟩
+      exact h ⟨k, by rw [mem_union]; right; exact hk⟩
 
 /-- Exercise 3.4.11 -/
 theorem SetTheory.Set.compl_iUnion {X I: Set} (hI: I ≠ ∅) (A: I → Set) :
-    X \ iUnion I A = iInter I hI (fun α ↦ X \ A α) := by sorry
+    X \ iUnion I A = iInter I hI (fun α ↦ X \ A α) := by
+  ext x
+  constructor
+  . intro h
+    rw [mem_sdiff] at h; obtain ⟨h1, h2⟩ := h
+    rw [mem_iInter]
+    intro i; rw [mem_sdiff]
+    refine ⟨h1, ?_⟩
+    contrapose! h2
+    rw [mem_iUnion]
+    use i
+  . intro h
+    rw [mem_sdiff]
+    rw [mem_iInter] at h
+    choose i hi using nonempty_def hI
+    have h' := h ⟨i, hi⟩
+    rw [mem_sdiff] at h'; obtain ⟨h1, h2⟩ := h'
+    refine ⟨h1, ?_⟩
+    rw [mem_iUnion]
+    push_neg
+    intro a
+    specialize h a; rw [mem_sdiff] at h
+    exact h.2
+
 
 /-- Exercise 3.4.11 -/
 theorem SetTheory.Set.compl_iInter {X I: Set} (hI: I ≠ ∅) (A: I → Set) :
-    X \ iInter I hI A = iUnion I (fun α ↦ X \ A α) := by sorry
+    X \ iInter I hI A = iUnion I (fun α ↦ X \ A α) := by
+  ext x
+  rw [mem_sdiff]
+  constructor
+  . intro h; obtain ⟨h1, h2⟩ := h
+    rw [mem_iUnion]
+    contrapose! h2
+    rw [mem_iInter]
+    intro a
+    specialize h2 a
+    rw [mem_sdiff] at h2; simp at h2
+    exact h2 h1
+  . intro h
+    rw [mem_iUnion] at h
+    choose a ha using h
+    rw [mem_sdiff] at ha
+    obtain ⟨h1, h2⟩ := ha
+    refine ⟨h1, ?_⟩
+    intro h'
+    rw [mem_iInter] at h'
+    specialize h' a
+    exact h2 h'
+
 
 end Chapter3

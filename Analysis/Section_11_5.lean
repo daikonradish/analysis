@@ -450,6 +450,17 @@ example : PiecewiseContinuousOn f_11_5_5 (Icc 1 3) := by
   . exact f_11_5_5_Icc22
   . exact f_11_5_5_Ioc23
 
+lemma IntegrableOn.congr {I : BoundedInterval} {f g : ℝ → ℝ} (hf : IntegrableOn f I) (heq : Set.EqOn f g I) : IntegrableOn g I := by
+  obtain ⟨hfbound, hfint⟩ := hf
+  have hgbound : BddOn g I := by
+    choose M hM using hfbound
+    use M
+    intro x hx; specialize hM x hx
+    specialize heq hx
+    rw [← heq]; exact hM
+  refine ⟨hgbound, ?_⟩
+  rwa [← upper_integral_congr heq, ← lower_integral_congr heq]
+
 
 open Classical in
 /-- Proposition 11.5.6 / Exercise 11.5.1 -/

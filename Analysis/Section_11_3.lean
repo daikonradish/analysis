@@ -129,20 +129,7 @@ theorem integ_congr {f g:ℝ → ℝ} {I: BoundedInterval} (h: Set.EqOn f g I) :
 noncomputable abbrev IntegrableOn (f:ℝ → ℝ) (I: BoundedInterval) : Prop :=
   BddOn f I ∧ lower_integral f I = upper_integral f I
 
-theorem IntegrableOn.congr {f g:ℝ → ℝ} {I: BoundedInterval} (h: Set.EqOn f g I) (hf : IntegrableOn f I) : IntegrableOn g I := by
-  have ⟨hfbd, hagree⟩ := hf
-  have hgbd : BddOn g I := by
-    choose B hB using hfbd
-    use B
-    intro x hx
-    specialize hB x hx
-    specialize h hx
-    rwa [← h]
-  refine ⟨hgbd, ?_⟩
 
-
-
-  sorry
 
 /-- Lemma 11.3.7 / Exercise 11.3.3 -/
 theorem integ_of_piecewise_const {f:ℝ → ℝ} {I: BoundedInterval} (hf: PiecewiseConstantOn f I) :
@@ -494,7 +481,6 @@ def MajorizesOn.of_add : Decidable ( ∀ (f g h:ℝ → ℝ) (I:BoundedInterval)
   intro f g h I hf x hx
   simp
   exact hf x hx
-
 
 
 def MajorizesOn.of_mul : Decidable ( ∀ (f g h:ℝ → ℝ) (I:BoundedInterval) (hfg: MajorizesOn f g I),

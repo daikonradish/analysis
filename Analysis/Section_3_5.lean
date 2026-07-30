@@ -52,12 +52,87 @@ theorem OrderedPair.eq (x y x' y' : Object) :
 /-- Helper lemma for Exercise 3.5.1 -/
 lemma SetTheory.Set.pair_eq_singleton_iff {a b c: Object} : {a, b} = ({c}: Set) ↔
     a = c ∧ b = c := by
-  sorry
+  simp only [Set.ext_iff, mem_singleton, mem_pair]
+  constructor
+  . intro h
+    have ha := h a
+    have hb := h b
+    exact ⟨ha.mp (by left; rfl), hb.mp (by right; rfl)⟩
+  . intro ⟨ha, hb⟩ x; constructor
+    . intro hx; rcases hx with ha | hb
+      . subst ha; exact ha
+      . subst hb; exact hb
+    . intro hc
+      subst hc
+      left; exact ha.symm
+
 
 /-- Exercise 3.5.1, first part -/
 def OrderedPair.toObject : OrderedPair ↪ Object where
   toFun p := ({ (({p.fst}:Set):Object), (({p.fst, p.snd}:Set):Object) }:Set)
-  inj' := by sorry
+  inj' := by
+    rw [Function.Injective]
+    intro a b h
+    simp at h
+    rw [SetTheory.Set.ext_iff] at h
+    simp only [SetTheory.Set.mem_pair] at h
+    have h1 := h (SetTheory.set_to_object {a.fst})
+    have h2 := h (SetTheory.set_to_object {a.fst, a.snd})
+    simp only [EmbeddingLike.apply_eq_iff_eq, true_or, true_iff, or_true] at h1 h2
+    have hfst : a.fst = b.fst := by
+      rcases h1 with h | h
+      . rw [SetTheory.Set.ext_iff] at h
+        have := h a.fst
+        simp only [SetTheory.Set.mem_singleton, true_iff] at this
+        exact this
+      . rw [SetTheory.Set.ext_iff] at h
+        have := h a.fst
+        simp at this
+        rcases this with h' | h'
+        . exact h'
+        . simp_all only [SetTheory.Set.mem_singleton, SetTheory.Set.mem_pair, iff_or_self, forall_eq]
+    simp_all
+    have h3 := h (SetTheory.set_to_object {b.fst, a.snd})
+    have h4 := h (SetTheory.set_to_object {b.fst, b.snd})
+    simp only [EmbeddingLike.apply_eq_iff_eq] at h3
+    simp only [EmbeddingLike.apply_eq_iff_eq, or_true, iff_true] at h4
+    simp at h3
+    have hor : a.snd = b.fst ∨ a.snd = b.snd := by
+      rcases h3 with h | h
+      . rw [SetTheory.Set.ext_iff] at h
+        simp only [SetTheory.Set.mem_pair, SetTheory.Set.mem_singleton, or_iff_left_iff_imp,
+          forall_eq] at h
+        left
+        exact h
+      . rw [SetTheory.Set.ext_iff] at h
+        simp only [SetTheory.Set.mem_pair] at h
+        have := h a.snd
+        simp only [or_true, true_iff] at this
+        exact this
+    have hor' : b.snd = b.fst ∨ b.snd = a.snd := by
+      rcases h4 with h | h
+      . rw [SetTheory.Set.ext_iff] at h
+        simp only [SetTheory.Set.mem_pair, SetTheory.Set.mem_singleton, or_iff_left_iff_imp,
+          forall_eq] at h
+        left
+        exact h
+      . rw [SetTheory.Set.ext_iff] at h
+        simp only [SetTheory.Set.mem_pair] at h
+        have := h b.snd
+        simp only [or_true, true_iff] at this
+        exact this
+    have hsnd : a.snd = b.snd := by
+      rcases hor with h | h
+      . rcases hor' with h' | h'
+        . rw [h, h']
+        . exact h'.symm
+      . exact h
+    ext
+    . exact hfst
+    . exact hsnd
+
+
+
 
 instance OrderedPair.inst_coeObject : Coe OrderedPair Object where
   coe := toObject
@@ -153,10 +228,14 @@ example : ({1, 2}: Set) ×ˢ ({3, 4, 5}: Set) = ({
 
 /-- Example 3.5.5 / Exercise 3.6.5. There is a bijection between {lean}`X ×ˢ Y` and {lean}`Y ×ˢ X`. -/
 noncomputable abbrev SetTheory.Set.prod_commutator (X Y:Set) : X ×ˢ Y ≃ Y ×ˢ X where
-  toFun := sorry
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+  toFun := fun a => SetTheory.Set.mk_cartesian (snd a) (fst a)
+  invFun := fun a => SetTheory.Set.mk_cartesian (snd a) (fst a)
+  left_inv := by
+    intro a
+    simp
+  right_inv := by
+    intro a
+    simp
 
 /-- Example 3.5.5. A function of two variables can be thought of as a function of a pair. -/
 noncomputable abbrev SetTheory.Set.curry_equiv {X Y Z:Set} : (X → Y → Z) ≃ (X ×ˢ Y → Z) where
@@ -204,33 +283,134 @@ noncomputable abbrev SetTheory.Set.prod_associator (X Y Z:Set) : (X ×ˢ Y) ×ˢ
 -/
 noncomputable abbrev SetTheory.Set.singleton_iProd_equiv (i:Object) (X:Set) :
     iProd (fun _:({i}:Set) ↦ X) ≃ X where
-  toFun := sorry
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+  toFun := fun z => ((mem_iProd _).mp z.property).choose ⟨i, by simp⟩
+  invFun := fun x ↦ ⟨tuple fun _ ↦ x, by rw [mem_iProd]; tauto⟩
+  left_inv := by
+    intro z
+    have h := ((mem_iProd _).mp z.property)
+    have hx := h.choose_spec
+    ext
+    rw [hx, tuple_inj]
+    simp
+    ext ⟨i', hi'⟩
+    rw [mem_singleton] at hi'
+    subst i'; rfl
+  right_inv := by
+    intro h
+    simp
+    generalize_proofs a
+    have ha := Classical.choose_spec a
+    rw [tuple_inj] at ha
+    simp [← ha]
+
 
 /-- Example 3.5.10 -/
 abbrev SetTheory.Set.empty_iProd_equiv (X: (∅:Set) → Set) : iProd X ≃ Unit where
-  toFun := sorry
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+  toFun := fun x => ()
+  invFun := fun _ =>
+    let u : (i: (∅:Set)) → X i := fun i ↦
+    have hf : False := by
+      have := i.property
+      have := SetTheory.Set.not_mem_empty i.val
+      contradiction
+    False.elim hf
+  ⟨ tuple u, by
+    rw [mem_iProd]
+    use u
+  ⟩
+  left_inv := by
+    intro ⟨x, hx⟩; simp
+    rw [mem_iProd] at hx
+    choose a ha using hx
+    rw [ha]
+    congr with ⟨x, hx⟩
+    simp at hx
+  right_inv := by
+    intro x
+    simp
+
 
 /-- Example 3.5.10 -/
 noncomputable abbrev SetTheory.Set.iProd_of_const_equiv (I:Set) (X: Set) :
     iProd (fun _:I ↦ X) ≃ (I → X) where
-  toFun := sorry
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+  toFun := fun x => fun i =>
+    have h := (mem_iProd _).mp x.property
+    (Classical.choose h) i
+  invFun := fun f ↦ ⟨ tuple (fun i ↦ f i), by
+    rw [mem_iProd]
+    use f
+  ⟩
+  left_inv := by
+    intro x; simp
+    have h := (mem_iProd _).mp x.property
+    have hp' := Classical.choose_spec h
+    congr
+    exact hp'.symm
+  right_inv := by
+    intro x
+    simp
+    generalize_proofs h
+    ext i
+    have hspec := Classical.choose_spec h
+    simp [tuple] at hspec
+    have h' := congrFun hspec i
+    simp at h'
+    exact h'.symm
 
+open Classical in
+/-- Assemble a dependent value over the two-element index set `{0,1}`. -/
+noncomputable abbrev SetTheory.Set.pair_fn (X : ({0,1} : Set) → Set)
+    (a : X ⟨0, by simp⟩) (b : X ⟨1, by simp⟩) : ∀ i : ({0,1} : Set), X i :=
+  fun i ↦ ⟨if (i : Object) = 0 then (a : Object) else (b : Object), by
+    rcases (mem_pair _ _ _).mp i.property with h | h
+    · rw [if_pos h, show i = (⟨0, by simp⟩ : ({0,1} : Set)) from Subtype.ext h]
+      exact a.property
+    · have h0 : (i : Object) ≠ 0 := by rw [h]; simp
+      rw [if_neg h0, show i = (⟨1, by simp⟩ : ({0,1} : Set)) from Subtype.ext h]
+      exact b.property⟩
+
+@[simp] theorem SetTheory.Set.pair_fn_zero {X : ({0,1} : Set) → Set}
+    (a : X ⟨0, by simp⟩) (b : X ⟨1, by simp⟩) : pair_fn X a b ⟨0, by simp⟩ = a := by
+  simp [pair_fn]
+
+@[simp] theorem SetTheory.Set.pair_fn_one {X : ({0,1} : Set) → Set}
+    (a : X ⟨0, by simp⟩) (b : X ⟨1, by simp⟩) : pair_fn X a b ⟨1, by simp⟩ = b := by
+  simp [pair_fn]
+
+open Classical in
 /-- Example 3.5.10 -/
 noncomputable abbrev SetTheory.Set.iProd_equiv_prod (X: ({0,1}:Set) → Set) :
     iProd X ≃ (X ⟨ 0, by simp ⟩) ×ˢ (X ⟨ 1, by simp ⟩) where
-  toFun := sorry
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+  toFun t := mk_cartesian
+    (((mem_iProd _).mp t.property).choose ⟨0, by simp⟩)
+    (((mem_iProd _).mp t.property).choose ⟨1, by simp⟩)
+  invFun p := ⟨tuple (pair_fn X (fst p) (snd p)), tuple_mem_iProd _⟩
+  left_inv t := by
+    apply Subtype.ext
+    rw [((mem_iProd _).mp t.property).choose_spec]
+    refine (tuple_inj _ _).mpr ?_
+    funext i
+    rcases (mem_pair _ _ _).mp i.property with h | h
+    · obtain rfl : i = (⟨0, by simp⟩ : ({0,1} : Set)) := Subtype.ext h
+      simp only [pair_fn_zero, fst_of_mk_cartesian]
+    · obtain rfl : i = (⟨1, by simp⟩ : ({0,1} : Set)) := Subtype.ext h
+      simp only [pair_fn_one, snd_of_mk_cartesian]
+  right_inv p := by
+    have hpc : pair_fn X (fst p) (snd p)
+        = ((mem_iProd _).mp
+            (⟨tuple (pair_fn X (fst p) (snd p)), tuple_mem_iProd _⟩ : iProd X).property).choose :=
+      (tuple_inj _ _).mp
+        ((mem_iProd _).mp
+          (⟨tuple (pair_fn X (fst p) (snd p)), tuple_mem_iProd _⟩ : iProd X).property).choose_spec
+    show mk_cartesian
+        (((mem_iProd _).mp
+          (⟨tuple (pair_fn X (fst p) (snd p)), tuple_mem_iProd _⟩ : iProd X).property).choose ⟨0, by simp⟩)
+        (((mem_iProd _).mp
+          (⟨tuple (pair_fn X (fst p) (snd p)), tuple_mem_iProd _⟩ : iProd X).property).choose ⟨1, by simp⟩)
+        = p
+    rw [← hpc]
+    simp only [pair_fn_zero, pair_fn_one]
+    exact mk_cartesian_fst_snd_eq p
 
 /-- Example 3.5.10 -/
 noncomputable abbrev SetTheory.Set.iProd_equiv_prod_triple (X: ({0,1,2}:Set) → Set) :
@@ -518,6 +698,7 @@ theorem SetTheory.Set.nat_unique (nat':Set) (zero:nat') (succ:nat' → nat')
       sorry
     sorry
   sorry
+
 
 
 end Chapter3

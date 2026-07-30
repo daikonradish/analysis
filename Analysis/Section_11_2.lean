@@ -1133,7 +1133,7 @@ theorem PiecewiseConstantOn.integ_of_extend {I J: BoundedInterval} (hIJ: I ⊆ J
   simp only [PiecewiseConstantWith.integ]
   have hQP : Q.intervals ⊆ P.intervals := by
     apply Finset.filter_subset
-  have hzero : ∀ x ∈ P.intervals, x ∉ Q.intervals → constant_value_on (fun x ↦ if x ∈ I then f x else 0) ↑x * x.length = 0 := by
+  have hzero : ∀ K ∈ P.intervals, K ∉ Q.intervals → constant_value_on (fun x ↦ if x ∈ I then f x else 0) K * K.length = 0 := by
     intro K hK hK'
     have hnotsub : ¬ ((K:Set ℝ) ⊆ (I:Set ℝ)) := by
       intro hsub
@@ -1141,7 +1141,7 @@ theorem PiecewiseConstantOn.integ_of_extend {I J: BoundedInterval} (hIJ: I ⊆ J
     have hdisjK : Disjoint (K:Set ℝ) (I:Set ℝ) := by
       exact (hcell K hK).resolve_left hnotsub
     by_cases! hne : (K:Set ℝ).Nonempty
-    . have h0 : constant_value_on (fun x ↦ if x ∈ I then f x else 0) ↑K = 0 := by
+    . have h0 : constant_value_on (fun x ↦ if x ∈ I then f x else 0) K = 0 := by
         apply ConstantOn.const_eq hne
         intro x hx
         have : x ∉ (I:Set ℝ) := by
@@ -1223,7 +1223,7 @@ theorem PiecewiseConstantOn.integ_of_join {I J K: BoundedInterval} (hIJK: K.join
   rw [PiecewiseConstantOn.integ_def hPQ, PiecewiseConstantOn.integ_def hP, PiecewiseConstantOn.integ_def hQ]
   simp only [PiecewiseConstantWith.integ]
   rw [← Finset.sum_union_inter]
-  suffices ∑ x ∈ P.intervals ∩ Q.intervals, constant_value_on f x * x.length = 0 by linarith
+  suffices ∑ ℓ ∈ P.intervals ∩ Q.intervals, constant_value_on f ℓ * ℓ.length = 0 by linarith
   apply Finset.sum_eq_zero
   intro L hL
   rw [Finset.mem_inter] at hL
